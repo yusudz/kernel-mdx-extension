@@ -1,0 +1,121 @@
+{
+  "name": "kernel-mdx",
+  "displayName": "Kernel MDX",
+  "description": "Transform MDX files into a personal knowledge graph with semantic search, AI chat, and intelligent block management",
+  "version": "0.1.0",
+  "publisher": "todo",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": ["Programming Languages", "Other"],
+  "keywords": ["mdx", "markdown", "knowledge-graph", "semantic-search", "ai", "claude"],
+  "activationEvents": [
+    "onLanguage:kernel-mdx"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "kernel-mdx",
+      "aliases": ["Kernel MDX"],
+      "extensions": [".mdx"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "kernel-mdx",
+      "scopeName": "source.kernelmdx",
+      "path": "./syntaxes/kernelmdx.tmLanguage.json"
+    }],
+    "foldingRangeProvider": true,
+    "documentLinkProvider": [{
+      "language": "kernel-mdx"
+    }],
+    "commands": [{
+      "command": "kernel-mdx.addBlockId",
+      "title": "Kernel MDX: Add Block ID"
+    },
+    {
+      "command": "kernel-mdx.searchBlocks",
+      "title": "Kernel MDX: Search Blocks"
+    },
+    {
+      "command": "kernel-mdx.flushBlocks",
+      "title": "Kernel MDX: Flush Block Cache"
+    },
+    {
+      "command": "kernel-mdx.parseAllNotes",
+      "title": "Kernel MDX: Parse All Notes"
+    },
+    {
+      "command": "kernel-mdx.openChat",
+      "title": "Kernel: Open Chat"
+    },
+    {
+      "command": "kernel-mdx.copyContext",
+      "title": "Kernel: Copy Current Context to Clipboard"
+    },
+    {
+      "command": "kernel-mdx.setupEmbeddings",
+      "title": "Kernel: Setup Embeddings Server"
+    }],
+    "keybindings": [{
+      "command": "kernel-mdx.addBlockId",
+      "key": "ctrl+shift+i",
+      "when": "editorTextFocus && editorLangId == kernel-mdx"
+    },
+    {
+      "command": "kernel-mdx.searchBlocks",
+      "key": "ctrl+shift+f",
+      "when": "editorTextFocus && editorLangId == kernel-mdx"
+    }],
+    "configuration": {
+      "title": "Kernel",
+      "properties": {
+        "kernel.notesFolder": {
+          "type": "string",
+          "default": "notes",
+          "description": "Folder containing your kernel notes"
+        },
+        "kernel.filePattern": {
+          "type": "string",
+          "default": "**/*.mdx",
+          "description": "File pattern for kernel notes"
+        },
+        "kernel.claudeApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Claude API key (keep this secret!)",
+          "markdownDescription": "Get your API key from [console.anthropic.com](https://console.anthropic.com/)"
+        },
+        "kernel.alwaysIncludeFiles": {
+          "type": "array",
+          "default": ["kernel_instructions.mdx"],
+          "description": "Files to always include in context",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kernel.preferredModel": {
+          "type": "string",
+          "default": "claude-4-sonnet-20250514",
+          "enum": [
+            "claude-4-opus-20250514",
+            "claude-4-sonnet-20250514"
+          ],
+          "description": "Preferred Claude model"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^16.0.0",
+    "@types/vscode": "^1.60.0",
+    "typescript": "^4.0.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

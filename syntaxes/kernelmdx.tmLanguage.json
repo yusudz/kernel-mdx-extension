@@ -1,0 +1,29 @@
+{
+  "name": "Kernel MDX",
+  "scopeName": "source.kernelmdx",
+  "injectionSelector": "L:text.html.markdown, L:source.mdx",
+  "patterns": [
+    {
+      "include": "source.mdx"
+    },
+    {
+      "include": "#kernel-additions"
+    }
+  ],
+  "repository": {
+    "kernel-additions": {
+      "patterns": [
+        {
+          "name": "meta.bracket-block.kernel",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "source.mdx"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
