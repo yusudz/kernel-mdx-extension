@@ -66,23 +66,20 @@ export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Prom
           });
         }
         break;
-      case "refreshContext":
-        const queryForRefresh = message.text; // Use the text sent from the webview
-        context = await gatherContext(vscode.window.activeTextEditor, embeddingsClient, queryForRefresh);
-        panel.webview.postMessage({
-          command: "contextUpdate",
-          context: context,
-        });
-        break;
       case "clearHistory":
         conversationHistory.length = 0;
         panel.webview.postMessage({ command: "historyCleared" });
         break;
       case "debugPrompt":
         // Build the actual prompt that would be sent
+        const debugQuery = message.text;
+        
+        // Re-gather context with semantic search based on the debug query - exactly like sendMessage
+        const debugContext = await gatherContext(vscode.window.activeTextEditor, embeddingsClient, debugQuery);
+        
         const { system, messages } = buildClaudePrompt(
-          message.text || "(empty message)",
-          context,
+          debugQuery,
+          debugContext,
           conversationHistory
         );
         
@@ -131,7 +128,7 @@ export async function gatherContext(
 
     // 3. Get referenced blocks from current file
     const text = editor.document.getText();
-    const refRegex = /@([a-zA-Z0-9_]+)\b/g;
+    const refRegex = /(?<!\]\s*)@([a-zA-Z0-9_]+)\b/g;
     let match;
 
     while ((match = refRegex.exec(text)) !== null) {
@@ -282,7 +279,6 @@ function getChatWebviewContent(
                 <textarea id="message-input" rows="3" placeholder="Ask about your notes..." 
     onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
                 <button onclick="sendMessage()">Send</button>
-                <button onclick="refreshContext()">Refresh Context</button>
                 <button class="debug-button" onclick="debugPrompt()">Debug</button>
                 <button class="clear-button" onclick="clearHistory()">Clear</button>
             </div>
@@ -319,12 +315,6 @@ function getChatWebviewContent(
                     container.scrollTop = container.scrollHeight;
                 }
                 
-                function refreshContext() {
-                    const input = document.getElementById('message-input');
-                    const currentQuery = input.value.trim(); // Get current text from input
-                    vscode.postMessage({ command: 'refreshContext', text: currentQuery }); // Send it as 'text'
-                }
-                
                 function debugPrompt() {
                     const input = document.getElementById('message-input');
                     const message = input.value.trim() || '(empty message)';
@@ -345,9 +335,6 @@ function getChatWebviewContent(
                     switch (message.command) {
                         case 'response':
                             addMessage(message.text, 'assistant', message.html);
-                            break;
-                        case 'contextUpdate':
-                            console.log('Context updated');
                             break;
                         case 'historyCleared':
                             console.log('History cleared');

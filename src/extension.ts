@@ -126,7 +126,7 @@ async function startEmbeddingsServer(
             resolved = true;
             resolve(false);
           }
-        }, 60000); // 60 seconds should be enough to see if it starts
+        }, 240000); // 240 (!!) seconds should be enough to see if it starts
       });
 
       const success = await startPromise;
