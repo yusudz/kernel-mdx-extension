@@ -9,16 +9,29 @@ import { Block } from './types';
 
 export class DocumentParser {
   parseDocument(document: vscode.TextDocument): void {
-    // Remove all existing blocks from this document
-    blockManager.removeBlocksFromFile(document.uri.toString());
-
     const text = document.getText();
     const matches = this.findBlockMatches(text);
+    
+    // Get existing blocks for this file
+    const fileUri = document.uri.toString();
+    const existingBlockIds = blockManager.getBlockIdsFromFile(fileUri);
+    
+    // Track which blocks we've seen in this parse
+    const currentBlockIds = new Set<string>();
 
+    // Update or add blocks
     for (const match of matches) {
       const block = this.createBlockFromMatch(match, document);
       if (block) {
         blockManager.set(match.id, block);
+        currentBlockIds.add(match.id);
+      }
+    }
+
+    // Remove only blocks that no longer exist in the document
+    for (const id of existingBlockIds) {
+      if (!currentBlockIds.has(id)) {
+        blockManager.delete(id);
       }
     }
 

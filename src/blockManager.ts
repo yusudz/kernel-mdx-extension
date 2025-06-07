@@ -105,6 +105,11 @@ export class BlockManager {
       .map(id => this.tryGet(id))
       .filter((block): block is Block => block !== undefined);
   }
+
+  getBlockIdsFromFile(fileUri: string): string[] {
+    const blockIds = this.fileIndex.get(fileUri);
+    return blockIds ? Array.from(blockIds) : [];
+  }
 }
 
 export const blockManager = new BlockManager();
