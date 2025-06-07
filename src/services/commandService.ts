@@ -3,9 +3,10 @@ import { EmbeddingsService } from "./embeddingsService";
 import { ContextService } from "./contextService";
 import { blockManager } from "../blockManager";
 import { updateDecorations } from "../decorations";
-import { parseDocument, parseAllNotesFolder } from "../parser";
+import { documentParser } from "../parser";
 import { searchBlocksCommand } from "../commands/searchBlocks";
 import { openChatCommand } from "../commands/chat";
+import { COMMANDS, LANGUAGE_ID } from "../constants";
 import * as path from "path";
 
 export class CommandService {
@@ -21,31 +22,31 @@ export class CommandService {
   registerCommands(): void {
     const commands = [
       {
-        id: "kernel-mdx.searchBlocks",
+        id: COMMANDS.SEARCH_BLOCKS,
         handler: () => searchBlocksCommand(this.embeddingsService.getClient()),
       },
       {
-        id: "kernel-mdx.setupEmbeddings",
+        id: COMMANDS.SETUP_EMBEDDINGS,
         handler: this.setupEmbeddings.bind(this),
       },
       {
-        id: "kernel-mdx.flushBlocks",
+        id: COMMANDS.FLUSH_BLOCKS,
         handler: this.flushBlocks.bind(this),
       },
       {
-        id: "kernel-mdx.openChat",
+        id: COMMANDS.OPEN_CHAT,
         handler: () => openChatCommand(this.embeddingsService.getClient()),
       },
       {
-        id: "kernel-mdx.parseAllNotes",
-        handler: parseAllNotesFolder,
+        id: COMMANDS.PARSE_ALL_NOTES,
+        handler: documentParser.parseAllNotesFolder,
       },
       {
-        id: "kernel-mdx.copyContext",
+        id: COMMANDS.COPY_CONTEXT,
         handler: this.copyContext.bind(this),
       },
       {
-        id: "kernel-mdx.addBlockId",
+        id: COMMANDS.ADD_BLOCK_ID,
         handler: this.addBlockId.bind(this),
       },
     ];
@@ -71,8 +72,8 @@ export class CommandService {
     blockManager.clear();
     let docCount = 0;
     vscode.workspace.textDocuments.forEach((doc) => {
-      if (doc.languageId === "kernel-mdx") {
-        parseDocument(doc);
+      if (doc.languageId === LANGUAGE_ID) {
+        documentParser.parseDocument(doc);
         docCount++;
       }
     });

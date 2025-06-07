@@ -3,100 +3,141 @@ import * as path from "path";
 import { EmbeddingsService } from "./services/embeddingsService";
 import { CommandService } from "./services/commandService";
 import { ProviderService } from "./providers/providerService";
-import { parseDocument, parseAllNotesFolder } from "./parser";
+import { documentParser } from "./parser";
 import { updateDecorations } from "./decorations";
+import { eventBus } from "./events/eventBus";
+import { LANGUAGE_ID, DEFAULT_CONFIG } from "./constants";
 
-let embeddingsService: EmbeddingsService;
+export class KernelExtension {
+  private embeddingsService!: EmbeddingsService;
+  private commandService!: CommandService;
+  private providerService!: ProviderService;
+  private disposables: vscode.Disposable[] = [];
 
-export async function activate(context: vscode.ExtensionContext) {
-  // Initialize services
-  embeddingsService = new EmbeddingsService({
-    serverDir: path.join(context.extensionPath, "embeddings-server"),
-    serverScript: path.join(context.extensionPath, "embeddings-server", "server.py"),
-    maxStartupTime: 240000, // 240 seconds (!!!)
-    pythonCommands: ["python3", "python", "py"],
-  });
+  constructor(private context: vscode.ExtensionContext) {}
 
-  const commandService = new CommandService(context, embeddingsService);
-  const providerService = new ProviderService(context);
+  async activate(): Promise<void> {
+    // Initialize services
+    this.initializeServices();
+    
+    // Start embeddings server asynchronously
+    this.startEmbeddingsServerAsync();
 
-  // Start embeddings server asynchronously
-  startEmbeddingsServerAsync(embeddingsService, context);
+    // Register all components
+    this.registerServices();
+    this.registerEventListeners();
+    this.setupEventBusListeners();
 
-  // Register all services
-  commandService.registerCommands();
-  providerService.registerProviders();
+    // Initial setup
+    await this.initializeExtension();
+  }
 
-  // Register event listeners
-  registerEventListeners(context);
+  deactivate(): void {
+    this.embeddingsService?.stop();
+    eventBus.dispose();
+    this.disposables.forEach(d => d.dispose());
+  }
 
-  // Initial setup
-  initializeExtension();
-}
+  private initializeServices(): void {
+    this.embeddingsService = new EmbeddingsService({
+      serverDir: path.join(this.context.extensionPath, "embeddings-server"),
+      serverScript: path.join(this.context.extensionPath, "embeddings-server", "server.py"),
+      maxStartupTime: DEFAULT_CONFIG.EMBEDDINGS_STARTUP_TIMEOUT,
+      pythonCommands: ["python3", "python", "py"],
+    });
 
-async function startEmbeddingsServerAsync(
-  service: EmbeddingsService,
-  context: vscode.ExtensionContext
-): Promise<void> {
-  try {
-    await service.start();
-    vscode.window.showInformationMessage(
-      "Embeddings server started successfully"
-    );
-  } catch (error: any) {
-    console.error("Embeddings server startup failed:", error);
-    vscode.window.showErrorMessage(
-      `Failed to start embeddings server: ${error.message}. Run 'Kernel: Setup Embeddings' to install dependencies.`
+    this.commandService = new CommandService(this.context, this.embeddingsService);
+    this.providerService = new ProviderService(this.context);
+  }
+
+  private registerServices(): void {
+    this.commandService.registerCommands();
+    this.providerService.registerProviders();
+  }
+
+  private async startEmbeddingsServerAsync(): Promise<void> {
+    try {
+      await this.embeddingsService.start();
+      eventBus.emit('embeddings:started', undefined);
+      vscode.window.showInformationMessage(
+        "Embeddings server started successfully"
+      );
+    } catch (error: any) {
+      eventBus.emit('embeddings:error', { error });
+      console.error("Embeddings server startup failed:", error);
+      vscode.window.showErrorMessage(
+        `Failed to start embeddings server: ${error.message}. Run 'Kernel: Setup Embeddings' to install dependencies.`
+      );
+    }
+  }
+
+  private registerEventListeners(): void {
+    this.disposables.push(
+      vscode.workspace.onDidChangeTextDocument((event) => {
+        if (event.document.languageId === LANGUAGE_ID) {
+          documentParser.parseDocument(event.document);
+        }
+      }),
+
+      vscode.workspace.onDidOpenTextDocument((document) => {
+        if (document.languageId === LANGUAGE_ID) {
+          documentParser.parseDocument(document);
+        }
+      }),
+
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        if (editor) {
+          updateDecorations(editor);
+        }
+      })
     );
   }
 
-  // Register cleanup
-  context.subscriptions.push({
-    dispose: () => service.stop(),
-  });
+  private setupEventBusListeners(): void {
+    this.disposables.push(
+      eventBus.on('blocks:cleared', () => {
+        updateDecorations();
+      }),
+
+      eventBus.on('block:added', () => {
+        updateDecorations();
+      }),
+
+      eventBus.on('block:updated', () => {
+        updateDecorations();
+      }),
+
+      eventBus.on('block:removed', () => {
+        updateDecorations();
+      })
+    );
+  }
+
+  private async initializeExtension(): Promise<void> {
+    // Parse all open documents
+    vscode.workspace.textDocuments.forEach((doc) => {
+      if (doc.languageId === LANGUAGE_ID) {
+        documentParser.parseDocument(doc);
+      }
+    });
+
+    // Update decorations for active editor
+    updateDecorations();
+
+    // Parse all notes in the background
+    documentParser.parseAllNotesFolder().catch((error) => {
+      console.error("Failed to parse notes folder:", error);
+    });
+  }
 }
 
-function registerEventListeners(context: vscode.ExtensionContext): void {
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument((event) => {
-      if (event.document.languageId === "kernel-mdx") {
-        parseDocument(event.document);
-      }
-    }),
+let extension: KernelExtension;
 
-    vscode.workspace.onDidOpenTextDocument((document) => {
-      if (document.languageId === "kernel-mdx") {
-        parseDocument(document);
-      }
-    }),
-
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        updateDecorations(editor);
-      }
-    })
-  );
-}
-
-function initializeExtension(): void {
-  // Parse all open documents
-  vscode.workspace.textDocuments.forEach((doc) => {
-    if (doc.languageId === "kernel-mdx") {
-      parseDocument(doc);
-    }
-  });
-
-  // Update decorations for active editor
-  updateDecorations();
-
-  // Parse all notes in the background
-  parseAllNotesFolder().catch((error) => {
-    console.error("Failed to parse notes folder:", error);
-  });
+export async function activate(context: vscode.ExtensionContext) {
+  extension = new KernelExtension(context);
+  await extension.activate();
 }
 
 export function deactivate() {
-  if (embeddingsService) {
-    embeddingsService.stop();
-  }
+  extension?.deactivate();
 }
