@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { blockManager } from '../blockManager';
 import { EmbeddingsClient } from '../embeddings';
+import { COMMANDS } from '../constants';
 
 export async function searchBlocksCommand(embeddingsClient?: EmbeddingsClient): Promise<void> {
   if (!embeddingsClient) {
@@ -105,7 +106,7 @@ export async function searchBlocksCommand(embeddingsClient?: EmbeddingsClient): 
         });
         await vscode.window.showTextDocument(doc);
       } else if (action === 'Try Again') {
-        vscode.commands.executeCommand('kernel-mdx.searchBlocks');
+        vscode.commands.executeCommand(COMMANDS.SEARCH_BLOCKS);
       }
       return;
     }
