@@ -92,7 +92,7 @@ export class BlockManager {
     const blockIds = this.fileIndex.get(fileUri);
     if (!blockIds) return;
 
-    for (const id of blockIds) {
+    for (const id of Array.from(blockIds)) {
       this.delete(id);
     }
   }

@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { blockManager } from './blockManager';
 import { updateDecorations } from './decorations';
-import { REGEX_PATTERNS, DEFAULT_CONFIG, LANGUAGE_ID } from './constants';
+import { REGEX_PATTERNS, DEFAULT_CONFIG } from './constants';
 import { ConfigurationError } from './errors';
 import { Block } from './types';
 

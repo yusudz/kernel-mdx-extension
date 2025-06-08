@@ -66,7 +66,7 @@ export class EmbeddingsService {
     return new Promise((resolve) => {
       console.log(`Trying to start embeddings server with: ${pythonCmd}`);
 
-      const process = spawn(pythonCmd, [this.options.serverScript], {
+      const childProcess = spawn(pythonCmd, [this.options.serverScript], {
         cwd: this.options.serverDir,
         windowsHide: true,
       });
@@ -75,8 +75,8 @@ export class EmbeddingsService {
       const cleanup = () => {
         if (!resolved) {
           resolved = true;
-          if (process && !process.killed) {
-            process.kill();
+          if (childProcess && !childProcess.killed) {
+            childProcess.kill();
           }
         }
       };
@@ -87,20 +87,20 @@ export class EmbeddingsService {
         resolve(false);
       }, this.options.maxStartupTime);
 
-      process.stdout?.on("data", (data) => {
+      childProcess.stdout?.on("data", (data) => {
         const output = data.toString();
         console.log(`Embeddings Server stdout (${pythonCmd}): ${output}`);
         
         if (!resolved && this.isServerReady(output)) {
           clearTimeout(timeout);
           resolved = true;
-          this.process = process;
+          this.process = childProcess;
           this.client = new EmbeddingsClient();
           resolve(true);
         }
       });
 
-      process.stderr?.on("data", (data) => {
+      childProcess.stderr?.on("data", (data) => {
         const error = data.toString();
         console.error(`Embeddings Server stderr (${pythonCmd}): ${error}`);
         
@@ -115,14 +115,14 @@ export class EmbeddingsService {
         }
       });
 
-      process.on("error", (error) => {
+      childProcess.on("error", (error) => {
         console.error(`Failed to spawn ${pythonCmd}: ${error.message}`);
         clearTimeout(timeout);
         cleanup();
         resolve(false);
       });
 
-      process.on("close", (code) => {
+      childProcess.on("close", (code) => {
         console.log(`Process ${pythonCmd} exited with code ${code}`);
         clearTimeout(timeout);
         cleanup();

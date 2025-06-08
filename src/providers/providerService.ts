@@ -58,7 +58,7 @@ export class ProviderService {
 
           const word = document.getText(range);
           const id = word.substring(1);
-          const block = blockManager.get(id);
+          const block = blockManager.tryGet(id);
 
           if (block) {
             return new vscode.Location(block.file, block.range);
