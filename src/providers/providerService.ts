@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { blockManager } from "../blockManager";
 import { KernelFoldingRangeProvider } from "./folding";
+import { LANGUAGE_ID } from "../constants";
 
 export class ProviderService {
   constructor(private context: vscode.ExtensionContext) {}
@@ -15,7 +16,7 @@ export class ProviderService {
   private registerFoldingProvider(): void {
     this.context.subscriptions.push(
       vscode.languages.registerFoldingRangeProvider(
-        "kernel-mdx",
+        LANGUAGE_ID,
         new KernelFoldingRangeProvider()
       )
     );
@@ -23,7 +24,7 @@ export class ProviderService {
 
   private registerHoverProvider(): void {
     this.context.subscriptions.push(
-      vscode.languages.registerHoverProvider("kernel-mdx", {
+      vscode.languages.registerHoverProvider(LANGUAGE_ID, {
         provideHover(document, position) {
           const range = document.getWordRangeAtPosition(
             position,
@@ -37,7 +38,7 @@ export class ProviderService {
 
           if (block) {
             const markdown = new vscode.MarkdownString();
-            markdown.appendCodeblock(block.content, "kernel-mdx");
+            markdown.appendCodeblock(block.content, LANGUAGE_ID);
             markdown.isTrusted = true;
             return new vscode.Hover(markdown, range);
           }
@@ -48,7 +49,7 @@ export class ProviderService {
 
   private registerDefinitionProvider(): void {
     this.context.subscriptions.push(
-      vscode.languages.registerDefinitionProvider("kernel-mdx", {
+      vscode.languages.registerDefinitionProvider(LANGUAGE_ID, {
         provideDefinition(document, position) {
           const range = document.getWordRangeAtPosition(
             position,
@@ -72,7 +73,7 @@ export class ProviderService {
     // Block creation completions
     this.context.subscriptions.push(
       vscode.languages.registerCompletionItemProvider(
-        "kernel-mdx",
+        LANGUAGE_ID,
         {
           provideCompletionItems(document, position) {
             const linePrefix = document
@@ -91,7 +92,7 @@ export class ProviderService {
     // Block reference completions
     this.context.subscriptions.push(
       vscode.languages.registerCompletionItemProvider(
-        "kernel-mdx",
+        LANGUAGE_ID,
         {
           provideCompletionItems(document, position) {
             const linePrefix = document
@@ -172,7 +173,7 @@ function createReferenceCompletions(): vscode.CompletionItem[] {
     item.detail = `@${id}`;
     item.insertText = id;
     item.documentation = new vscode.MarkdownString();
-    item.documentation.appendCodeblock(block.content, "kernel-mdx");
+    item.documentation.appendCodeblock(block.content, LANGUAGE_ID);
     item.filterText = id + " " + block.content.replace(/\n/g, " ");
 
     items.push(item);

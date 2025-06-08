@@ -4,11 +4,12 @@ import { EmbeddingsClient } from "../embeddings";
 import { ClaudeService } from "../services/claudeService";
 import { ContextService } from "../services/contextService";
 import { ChatWebview } from "../webviews/chatWebview";
+import { DEFAULT_CONFIG } from "../constants";
 
 export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Promise<void> {
   const config = vscode.workspace.getConfiguration("kernel");
   const apiKey = config.get<string>("claudeApiKey", "");
-  const preferredModel = config.get<string>("preferredModel", "claude-4-sonnet-20250514");
+  const preferredModel = config.get<string>("preferredModel", DEFAULT_CONFIG.PREFERRED_MODEL);
 
   const claudeService = new ClaudeService({
     apiKey,

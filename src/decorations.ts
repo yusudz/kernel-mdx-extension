@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { blockManager } from './blockManager';
+import { LANGUAGE_ID } from './constants';
 
 const blockIdDecorationType = vscode.window.createTextEditorDecorationType({
   color: '#7aa2f7',
@@ -19,7 +20,7 @@ export function updateDecorations(editor?: vscode.TextEditor): void {
   if (!editor) {
     editor = vscode.window.activeTextEditor;
   }
-  if (!editor || editor.document.languageId !== 'kernel-mdx') return;
+  if (!editor || editor.document.languageId !== LANGUAGE_ID) return;
 
   const text = editor.document.getText();
   const validDecorations: vscode.DecorationOptions[] = [];

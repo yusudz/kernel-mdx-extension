@@ -39,7 +39,7 @@ export class CommandService {
       },
       {
         id: COMMANDS.PARSE_ALL_NOTES,
-        handler: documentParser.parseAllNotesFolder,
+        handler: documentParser.parseAllNotesFolder.bind(documentParser),
       },
       {
         id: COMMANDS.COPY_CONTEXT,
