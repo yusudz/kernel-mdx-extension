@@ -2,8 +2,8 @@
   "name": "kernel-mdx",
   "displayName": "Kernel MDX",
   "description": "Transform MDX files into a personal knowledge graph with semantic search, AI chat, and intelligent block management",
-  "version": "0.1.1",
-  "publisher": "todo",
+  "version": "0.1.2",
+  "publisher": "yurysudz",
   "engines": {
     "vscode": "^1.60.0"
   },

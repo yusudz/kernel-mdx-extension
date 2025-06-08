@@ -16,14 +16,14 @@ export class CommandService {
     private context: vscode.ExtensionContext,
     private embeddingsService: EmbeddingsService
   ) {
-    this.contextService = new ContextService();
+    this.contextService = new ContextService(embeddingsService);
   }
 
   registerCommands(): void {
     const commands = [
       {
         id: COMMANDS.SEARCH_BLOCKS,
-        handler: () => searchBlocksCommand(this.embeddingsService.getClient()),
+        handler: () => searchBlocksCommand(this.embeddingsService),
       },
       {
         id: COMMANDS.SETUP_EMBEDDINGS,
@@ -35,7 +35,7 @@ export class CommandService {
       },
       {
         id: COMMANDS.OPEN_CHAT,
-        handler: () => openChatCommand(this.embeddingsService.getClient()),
+        handler: () => openChatCommand(this.embeddingsService),
       },
       {
         id: COMMANDS.PARSE_ALL_NOTES,
@@ -85,10 +85,7 @@ export class CommandService {
 
   private async copyContext(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
-    const context = await this.contextService.gatherContext({
-      editor,
-      embeddingsClient: this.embeddingsService.getClient(),
-    });
+    const context = await this.contextService.gatherContext({ editor });
     await vscode.env.clipboard.writeText(context);
     vscode.window.showInformationMessage(
       `Copied ${context.length} characters of context to clipboard`
