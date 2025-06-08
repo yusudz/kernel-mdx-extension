@@ -20,11 +20,6 @@
       "extensions": [".mdx"],
       "configuration": "./language-configuration.json"
     }],
-    "grammars": [{
-      "language": "kernel-mdx",
-      "scopeName": "source.kernelmdx",
-      "path": "./syntaxes/kernelmdx.tmLanguage.json"
-    }],
     "foldingRangeProvider": true,
     "documentLinkProvider": [{
       "language": "kernel-mdx"
