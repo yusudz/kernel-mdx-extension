@@ -33,7 +33,7 @@ export class ProviderService {
 
           const word = document.getText(range);
           const id = word.substring(1);
-          const block = blockManager.get(id);
+          const block = blockManager.tryGet(id);
 
           if (block) {
             const markdown = new vscode.MarkdownString();
@@ -96,7 +96,7 @@ export class ProviderService {
           provideCompletionItems(document, position) {
             const linePrefix = document
               .lineAt(position)
-              .text.substr(0, position.character);
+              .text.substring(0, position.character);
 
             if (linePrefix.endsWith("@")) {
               return createReferenceCompletions();
