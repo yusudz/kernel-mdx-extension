@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { ConversationMessage } from "../types";
-import { EmbeddingsClient } from "../embeddings";
+import { EmbeddingsService } from "../services/embeddingsService";
 import { ClaudeService } from "../services/claudeService";
 import { ContextService } from "../services/contextService";
 import { ChatWebview } from "../webviews/chatWebview";
 import { DEFAULT_CONFIG } from "../constants";
 
-export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Promise<void> {
+export async function openChatCommand(embeddingsService: EmbeddingsService): Promise<void> {
   const config = vscode.workspace.getConfiguration("kernel");
   const apiKey = config.get<string>("claudeApiKey", "");
   const preferredModel = config.get<string>("preferredModel", DEFAULT_CONFIG.PREFERRED_MODEL);
@@ -16,7 +16,14 @@ export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Prom
     model: preferredModel,
   });
 
-  const contextService = new ContextService();
+  const contextService = new ContextService(embeddingsService);
+
+  // Show a warning if embeddings aren't ready yet
+  if (!embeddingsService.isReady()) {
+    vscode.window.showWarningMessage(
+      "Embeddings service is still starting. Semantic search will not be available in this chat session."
+    );
+  }
 
   const panel = vscode.window.createWebviewPanel(
     "kernelChat",
@@ -46,8 +53,7 @@ export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Prom
           panel,
           claudeService,
           contextService,
-          conversationHistory,
-          embeddingsClient
+          conversationHistory
         );
         break;
         
@@ -61,8 +67,7 @@ export async function openChatCommand(embeddingsClient?: EmbeddingsClient): Prom
           message.text,
           claudeService,
           contextService,
-          conversationHistory,
-          embeddingsClient
+          conversationHistory
         );
         break;
     }
@@ -74,15 +79,13 @@ async function handleSendMessage(
   panel: vscode.WebviewPanel,
   claudeService: ClaudeService,
   contextService: ContextService,
-  conversationHistory: ConversationMessage[],
-  embeddingsClient?: EmbeddingsClient
+  conversationHistory: ConversationMessage[]
 ): Promise<void> {
   conversationHistory.push({ role: "user", content: userMessage });
   
   // Re-gather context with semantic search based on the user's message
   const context = await contextService.gatherContext({
     editor: vscode.window.activeTextEditor,
-    embeddingsClient,
     query: userMessage,
   });
   
@@ -119,13 +122,11 @@ async function handleDebugPrompt(
   debugQuery: string,
   claudeService: ClaudeService,
   contextService: ContextService,
-  conversationHistory: ConversationMessage[],
-  embeddingsClient?: EmbeddingsClient
+  conversationHistory: ConversationMessage[]
 ): Promise<void> {
   // Re-gather context with semantic search based on the debug query
   const debugContext = await contextService.gatherContext({
     editor: vscode.window.activeTextEditor,
-    embeddingsClient,
     query: debugQuery,
   });
   

@@ -1,11 +1,10 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { blockManager } from "../blockManager";
-import { EmbeddingsClient } from "../embeddings";
+import { EmbeddingsService } from "./embeddingsService";
 
 export interface ContextOptions {
   editor?: vscode.TextEditor;
-  embeddingsClient?: EmbeddingsClient;
   query?: string;
   alwaysIncludeFiles?: string[];
   maxSemanticResults?: number;
@@ -13,10 +12,11 @@ export interface ContextOptions {
 }
 
 export class ContextService {
+  constructor(private embeddingsService: EmbeddingsService) {}
+
   async gatherContext(options: ContextOptions = {}): Promise<string> {
     const {
       editor,
-      embeddingsClient,
       query,
       alwaysIncludeFiles = this.getAlwaysIncludeFiles(),
       maxSemanticResults = 10,
@@ -41,9 +41,8 @@ export class ContextService {
     }
 
     // 4. Semantic search for relevant blocks
-    if (embeddingsClient && query && query.trim()) {
+    if (this.embeddingsService.isReady() && query?.trim()) {
       const semanticBlocks = await this.getSemanticBlocks(
-        embeddingsClient,
         query,
         includedBlockIds,
         maxSemanticResults
@@ -113,7 +112,6 @@ export class ContextService {
   }
 
   private async getSemanticBlocks(
-    embeddingsClient: EmbeddingsClient,
     query: string,
     includedBlockIds: Set<string>,
     maxResults: number
@@ -132,11 +130,7 @@ export class ContextService {
         return parts;
       }
 
-      const results = await embeddingsClient.findSimilar(
-        query,
-        allBlocks.map(b => b.content),
-        maxResults
-      );
+      const results = await this.embeddingsService.findSimilar(query, allBlocks, maxResults);
 
       for (const result of results) {
         const block = allBlocks[result.index];

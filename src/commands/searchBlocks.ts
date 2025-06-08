@@ -1,21 +1,20 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { blockManager } from '../blockManager';
-import { EmbeddingsClient } from '../embeddings';
+import { EmbeddingsService } from '../services/embeddingsService';
 import { COMMANDS } from '../constants';
 
-export async function searchBlocksCommand(embeddingsClient?: EmbeddingsClient): Promise<void> {
-  if (!embeddingsClient) {
+export async function searchBlocksCommand(embeddingsService: EmbeddingsService): Promise<void> {
+  if (!embeddingsService.isReady()) {
     vscode.window.showErrorMessage(
-      "Embeddings client is not available. The embeddings server might not be running or fully initialized. Please try again shortly or ensure the server is started."
+      "Embeddings service is not ready. The server might still be starting up."
     );
-    // You could offer to run "Kernel: Setup Embeddings" or show server start instructions here as well.
     return;
   }
   
   const query = await vscode.window.showInputBox({
     prompt: 'What are you looking for?',
-    placeHolder: 'e.g., "Should I move out?", "panic attack", "3am thoughts"',
+    placeHolder: 'e.g., "Should I eat out?", "panic attack", "3am thoughts"',
   });
 
   if (!query) return;
@@ -42,10 +41,11 @@ export async function searchBlocksCommand(embeddingsClient?: EmbeddingsClient): 
           return;
         }
 
-        const results = await embeddingsClient.findSimilar(
+        progress.report({ message: 'Finding similar blocks...' });
+
+        const results = await embeddingsService.findSimilar(
           query,
-          blocks.map((b) => b.content),
-          10
+          blocks.map(b => ({ id: b.id, content: b.content }))
         );
 
         const outputContent = [
@@ -76,41 +76,6 @@ export async function searchBlocksCommand(embeddingsClient?: EmbeddingsClient): 
       }
     );
   } catch (error: any) {
-    if (error.message.includes('fetch') || error.message.includes('ECONNREFUSED')) {
-      const action = await vscode.window.showErrorMessage(
-        'Embeddings server not running. Start it to use semantic search.',
-        'Show Instructions',
-        'Try Again'
-      );
-
-      if (action === 'Show Instructions') {
-        const instructions = [
-          '# Start Embeddings Server',
-          '',
-          '1. Open terminal in project root',
-          '2. Navigate to embeddings server:',
-          '   ```',
-          '   cd code/embeddings-server',
-          '   ```',
-          '3. Run the server:',
-          '   ```',
-          '   python server.py',
-          '   ```',
-          '',
-          'The server will run on http://localhost:5000',
-        ].join('\n');
-
-        const doc = await vscode.workspace.openTextDocument({
-          language: 'markdown',
-          content: instructions,
-        });
-        await vscode.window.showTextDocument(doc);
-      } else if (action === 'Try Again') {
-        vscode.commands.executeCommand(COMMANDS.SEARCH_BLOCKS);
-      }
-      return;
-    }
-
     vscode.window.showErrorMessage(`Search failed: ${error.message}`);
   }
 }
