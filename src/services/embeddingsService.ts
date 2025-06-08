@@ -21,7 +21,7 @@ interface CachedEmbedding {
 export class EmbeddingsService {
   private serverManager: PythonServerManager;
   private client?: EmbeddingsClient;
-  private cache = new Map<string, CachedEmbedding>();
+  private cache = new Map<string, CachedEmbedding>(); //TODO: LRU cache or max size limit
   private eventListeners: Array<Disposable> = [];
 
   constructor(private options: EmbeddingsServiceOptions) {
