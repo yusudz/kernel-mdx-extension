@@ -81,6 +81,12 @@
           "description": "Your Claude API key (keep this secret!)",
           "markdownDescription": "Get your API key from [console.anthropic.com](https://console.anthropic.com/)"
         },
+        "kernel.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your OpenAI API key (keep this secret!)",
+          "markdownDescription": "Get your API key from [platform.openai.com](https://platform.openai.com/api-keys)"
+        },
         "kernel.alwaysIncludeFiles": {
           "type": "array",
           "default": ["kernel_instructions.mdx"],
@@ -89,7 +95,7 @@
             "type": "string"
           }
         },
-        "kernel.preferredModel": {
+        "kernel.claudeModel": {
           "type": "string",
           "default": "claude-4-sonnet-20250514",
           "enum": [
@@ -97,6 +103,17 @@
             "claude-4-sonnet-20250514"
           ],
           "description": "Preferred Claude model"
+        },
+        "kernel.openaiModel": {
+          "type": "string",
+          "default": "gpt-4.1-mini",
+          "enum": [
+            "gpt-4.1-mini",
+            "gpt-4.1",
+            "gpt-4o",
+            "gpt-4o-mini"
+          ],
+          "description": "OpenAI model to use"
         }
       }
     }

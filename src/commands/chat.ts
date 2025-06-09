@@ -10,12 +10,12 @@ import { DEFAULT_CONFIG } from "../constants";
 export async function openChatCommand(embeddingsService: EmbeddingsService): Promise<void> {
   const config = vscode.workspace.getConfiguration("kernel");
   const apiKey = config.get<string>("claudeApiKey", "");
-  const preferredModel = config.get<string>("preferredModel", DEFAULT_CONFIG.PREFERRED_MODEL);
+  const claudeModel = config.get<string>("claudeModel", DEFAULT_CONFIG.CLAUDE_MODEL);
 
   // For now, hardcode to use Claude
   const aiService: BaseAiService = new ClaudeService({
     apiKey,
-    model: preferredModel,
+    model: claudeModel,
   });
 
   const contextService = new ContextService(embeddingsService);
@@ -43,7 +43,7 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
   });
 
   panel.webview.html = ChatWebview.getHtml({
-    model: preferredModel,
+    model: claudeModel,
     initialContext: context,
   });
 
