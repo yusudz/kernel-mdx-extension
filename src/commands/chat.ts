@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ConversationMessage } from "../types";
 import { EmbeddingsService } from "../services/embeddingsService";
+import { BaseAiService } from "../services/baseAiService";
 import { ClaudeService } from "../services/claudeService";
 import { ContextService } from "../services/contextService";
 import { ChatWebview } from "../webviews/chatWebview";
@@ -9,11 +10,12 @@ import { DEFAULT_CONFIG } from "../constants";
 export async function openChatCommand(embeddingsService: EmbeddingsService): Promise<void> {
   const config = vscode.workspace.getConfiguration("kernel");
   const apiKey = config.get<string>("claudeApiKey", "");
-  const preferredModel = config.get<string>("preferredModel", DEFAULT_CONFIG.PREFERRED_MODEL);
+  const claudeModel = config.get<string>("claudeModel", DEFAULT_CONFIG.CLAUDE_MODEL);
 
-  const claudeService = new ClaudeService({
+  // For now, hardcode to use Claude
+  const aiService: BaseAiService = new ClaudeService({
     apiKey,
-    model: preferredModel,
+    model: claudeModel,
   });
 
   const contextService = new ContextService(embeddingsService);
@@ -41,7 +43,7 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
   });
 
   panel.webview.html = ChatWebview.getHtml({
-    model: preferredModel,
+    model: claudeModel,
     initialContext: context,
   });
 
@@ -51,7 +53,7 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
         await handleSendMessage(
           message.text,
           panel,
-          claudeService,
+          aiService,
           contextService,
           conversationHistory
         );
@@ -65,7 +67,7 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
       case "debugPrompt":
         await handleDebugPrompt(
           message.text,
-          claudeService,
+          aiService,
           contextService,
           conversationHistory
         );
@@ -77,7 +79,7 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
 async function handleSendMessage(
   userMessage: string,
   panel: vscode.WebviewPanel,
-  claudeService: ClaudeService,
+  aiService: BaseAiService,  // Changed from ClaudeService
   contextService: ContextService,
   conversationHistory: ConversationMessage[]
 ): Promise<void> {
@@ -90,7 +92,7 @@ async function handleSendMessage(
   });
   
   try {
-    const response = await claudeService.query(
+    const response = await aiService.query(
       userMessage,
       context,
       conversationHistory
@@ -120,7 +122,7 @@ async function handleSendMessage(
 
 async function handleDebugPrompt(
   debugQuery: string,
-  claudeService: ClaudeService,
+  aiService: BaseAiService,
   contextService: ContextService,
   conversationHistory: ConversationMessage[]
 ): Promise<void> {
@@ -130,13 +132,13 @@ async function handleDebugPrompt(
     query: debugQuery,
   });
   
-  const { system, messages } = claudeService.buildPrompt(
+  const { system, messages } = aiService.buildPrompt(
     debugQuery,
     debugContext,
     conversationHistory
   );
   
-  const debugText = claudeService.formatDebugPrompt(system, messages);
+  const debugText = aiService.formatDebugPrompt(system, messages);
   await vscode.env.clipboard.writeText(debugText);
   vscode.window.showInformationMessage("Debug prompt copied to clipboard!");
 }

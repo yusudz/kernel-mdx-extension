@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
 import { ConversationMessage } from "../types";
+import { BaseAiService } from "./baseAiService";
 
 export interface ClaudeApiConfig {
   apiKey: string;
@@ -45,10 +45,12 @@ export class ClaudeApiError extends Error {
   }
 }
 
-export class ClaudeService {
+export class ClaudeService extends BaseAiService {
   private readonly apiUrl = "https://api.anthropic.com/v1/messages";
   
-  constructor(private config: ClaudeApiConfig) {}
+  constructor(private config: ClaudeApiConfig) {
+    super();
+  }
 
   async query(
     query: string,
@@ -78,51 +80,6 @@ export class ClaudeService {
       }
       throw new ClaudeApiError(`Claude API error: ${error.message}`);
     }
-  }
-
-  buildPrompt(
-    query: string,
-    context: string,
-    history: ConversationMessage[] = []
-  ): { system: string; messages: ClaudeMessage[] } {
-    const system = 
-      "You are Kernel, an AI assistant with access to the user's personal knowledge graph. " +
-      "Answer based on the provided context.";
-    
-    const messages: ClaudeMessage[] = [];
-
-    messages.push({
-      role: "user",
-      content: `Here is my current context:\n\n${context}\n\n---\n\nI'll now ask questions about this context.`,
-    });
-
-    history.forEach((msg) => {
-      messages.push({
-        role: msg.role,
-        content: msg.content,
-      });
-    });
-
-    if (history.length === 0 || history[history.length - 1].content !== query) {
-      messages.push({
-        role: "user",
-        content: query,
-      });
-    }
-
-    return { system, messages };
-  }
-
-  formatDebugPrompt(system: string, messages: ClaudeMessage[]): string {
-    let debugText = `=== DEBUG PROMPT ===\n\n`;
-    debugText += `SYSTEM: ${system}\n\n`;
-    debugText += `=== MESSAGES ===\n`;
-    
-    messages.forEach((msg, index) => {
-      debugText += `[${index + 1}] ${msg.role.toUpperCase()}: ${msg.content}\n\n`;
-    });
-    
-    return debugText;
   }
 
   private async makeApiRequest(request: ClaudeRequest): Promise<ClaudeResponse> {
