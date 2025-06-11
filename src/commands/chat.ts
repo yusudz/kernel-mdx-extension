@@ -38,13 +38,9 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
   );
 
   const conversationHistory: ConversationMessage[] = [];
-  let context = await contextService.gatherContext({
-    editor: vscode.window.activeTextEditor,
-  });
 
   panel.webview.html = ChatWebview.getHtml({
-    model: claudeModel,
-    initialContext: context,
+    model: claudeModel
   });
 
   panel.webview.onDidReceiveMessage(async (message) => {
@@ -79,25 +75,33 @@ export async function openChatCommand(embeddingsService: EmbeddingsService): Pro
 async function handleSendMessage(
   userMessage: string,
   panel: vscode.WebviewPanel,
-  aiService: BaseAiService,  // Changed from ClaudeService
+  aiService: BaseAiService,
   contextService: ContextService,
   conversationHistory: ConversationMessage[]
 ): Promise<void> {
-  conversationHistory.push({ role: "user", content: userMessage });
   
-  // Re-gather context with semantic search based on the user's message
-  const context = await contextService.gatherContext({
+  // Gather context with semantic search based on the user's message
+  let context = await contextService.gatherContext({
     editor: vscode.window.activeTextEditor,
     query: userMessage,
   });
   
+  // Compress context with awareness of conversation history
+  context = await contextService.compressContext(
+    context, 
+    userMessage, 
+    conversationHistory
+  );
+  
   try {
-    const response = await aiService.query(
+    const response = await aiService.queryWithContext(
       userMessage,
       context,
-      conversationHistory
+      conversationHistory  // This now contains only previous messages
     );
     
+    // NOW add both the user message and response to history
+    conversationHistory.push({ role: "user", content: userMessage });
     conversationHistory.push({ role: "assistant", content: response });
 
     const md = new vscode.MarkdownString(response);
@@ -126,7 +130,7 @@ async function handleDebugPrompt(
   contextService: ContextService,
   conversationHistory: ConversationMessage[]
 ): Promise<void> {
-  // Re-gather context with semantic search based on the debug query
+  // Gather context with semantic search based on the debug query
   const debugContext = await contextService.gatherContext({
     editor: vscode.window.activeTextEditor,
     query: debugQuery,

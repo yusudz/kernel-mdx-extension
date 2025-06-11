@@ -1,5 +1,5 @@
 import { ConversationMessage } from "../types";
-import { BaseAiService } from "./baseAiService";
+import { AiPrompt, BaseAiService } from "./baseAiService";
 
 export interface ClaudeApiConfig {
   apiKey: string;
@@ -52,25 +52,19 @@ export class ClaudeService extends BaseAiService {
     super();
   }
 
-  async query(
-    query: string,
-    context: string,
-    history: ConversationMessage[] = []
-  ): Promise<string> {
+  async query(prompt: AiPrompt): Promise<string> {
     if (!this.config.apiKey) {
       throw new ClaudeApiError(
         "Please set your Claude API key in settings: Kernel > Claude API Key"
       );
     }
 
-    const { system, messages } = this.buildPrompt(query, context, history);
-
     try {
       const response = await this.makeApiRequest({
         model: this.config.model,
         max_tokens: this.config.maxTokens || 4000,
-        messages,
-        system,
+        messages: prompt.messages,
+        system: prompt.system,
       });
 
       return response.content[0].text;

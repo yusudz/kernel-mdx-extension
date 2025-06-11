@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { blockManager } from "../blockManager";
 import { EmbeddingsService } from "./embeddingsService";
+import { OpenAiService } from "./openaiService";
+import { ConversationMessage } from "../types";
+import { DEFAULT_CONFIG } from "../constants";
 
 export interface ContextOptions {
   editor?: vscode.TextEditor;
@@ -12,7 +15,23 @@ export interface ContextOptions {
 }
 
 export class ContextService {
-  constructor(private embeddingsService: EmbeddingsService) {}
+  private openAiService?: OpenAiService;
+
+  constructor(private embeddingsService: EmbeddingsService) {
+    // Initialize OpenAI service for compression if API key is available
+    const config = vscode.workspace.getConfiguration("kernel");
+    const openAiApiKey = config.get<string>("openaiApiKey", "");
+    const model = config.get<string>("openaiModel", DEFAULT_CONFIG.OPENAI_MODEL);
+
+    if (openAiApiKey) {
+      this.openAiService = new OpenAiService({
+        apiKey: openAiApiKey,
+        model: model,
+        maxTokens: DEFAULT_CONFIG.MAX_TOKENS,
+        temperature: DEFAULT_CONFIG.TEMPERATURE,
+      });
+    }
+  }
 
   async gatherContext(options: ContextOptions = {}): Promise<string> {
     const {
@@ -27,7 +46,9 @@ export class ContextService {
     const includedBlockIds = new Set<string>();
 
     // 1. Always include specified files
-    const alwaysIncludeParts = await this.includeAlwaysIncludeFiles(alwaysIncludeFiles);
+    const alwaysIncludeParts = await this.includeAlwaysIncludeFiles(
+      alwaysIncludeFiles
+    );
     contextParts.push(...alwaysIncludeParts);
 
     // 2. Current file content
@@ -36,7 +57,10 @@ export class ContextService {
       contextParts.push(currentFilePart);
 
       // 3. Get referenced blocks from current file
-      const referencedBlocks = this.getReferencedBlocks(editor, includedBlockIds);
+      const referencedBlocks = this.getReferencedBlocks(
+        editor,
+        includedBlockIds
+      );
       contextParts.push(...referencedBlocks);
     }
 
@@ -54,7 +78,10 @@ export class ContextService {
     }
 
     // 5. Recent blocks
-    const recentBlocks = this.getRecentBlocks(includedBlockIds, maxRecentBlocks);
+    const recentBlocks = this.getRecentBlocks(
+      includedBlockIds,
+      maxRecentBlocks
+    );
     if (recentBlocks) {
       contextParts.push(`\n// Recent blocks\n${recentBlocks}`);
     }
@@ -64,12 +91,16 @@ export class ContextService {
 
   private getAlwaysIncludeFiles(): string[] {
     const config = vscode.workspace.getConfiguration("kernel");
-    return config.get<string[]>("alwaysIncludeFiles", ["kernel_instructions.mdx"]);
+    return config.get<string[]>("alwaysIncludeFiles", [
+      "kernel_instructions.mdx",
+    ]);
   }
 
-  private async includeAlwaysIncludeFiles(filenames: string[]): Promise<string[]> {
+  private async includeAlwaysIncludeFiles(
+    filenames: string[]
+  ): Promise<string[]> {
     const parts: string[] = [];
-    
+
     for (const filename of filenames) {
       try {
         const files = await vscode.workspace.findFiles(`**/${filename}`);
@@ -81,7 +112,7 @@ export class ContextService {
         console.error(`Failed to include ${filename}:`, error);
       }
     }
-    
+
     return parts;
   }
 
@@ -117,7 +148,7 @@ export class ContextService {
     maxResults: number
   ): Promise<string[]> {
     const parts: string[] = [];
-    
+
     try {
       const allBlocks = Array.from(blockManager.entries())
         .filter(([id]) => !includedBlockIds.has(id))
@@ -130,12 +161,18 @@ export class ContextService {
         return parts;
       }
 
-      const results = await this.embeddingsService.findSimilar(query, allBlocks, maxResults);
+      const results = await this.embeddingsService.findSimilar(
+        query,
+        allBlocks,
+        maxResults
+      );
 
       for (const result of results) {
         const block = allBlocks[result.index];
         parts.push(
-          `\n// Related block @${block.id} (score: ${result.score.toFixed(3)})\n${block.content}`
+          `\n// Related block @${block.id} (score: ${result.score.toFixed(
+            3
+          )})\n${block.content}`
         );
         includedBlockIds.add(block.id);
       }
@@ -157,5 +194,24 @@ export class ContextService {
       .join("\n\n");
 
     return recentBlocks;
+  }
+
+  async compressContext(
+    context: string,
+    query: string,
+    history: ConversationMessage[] = []
+  ): Promise<string> {
+    if (!this.openAiService) {
+      // No compression available, return as-is
+      console.warn("OpenAI service not initialized, skipping context compression.");
+      return context;
+    }
+
+    try {
+      return await this.openAiService.compressContext(context, query, history);
+    } catch (error) {
+      console.error("Context compression failed:", error);
+      return context; // Return original on failure
+    }
   }
 }
