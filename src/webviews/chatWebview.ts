@@ -1,6 +1,5 @@
 export interface ChatWebviewOptions {
   model: string;
-  initialContext?: string;
 }
 
 export class ChatWebview {

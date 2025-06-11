@@ -1,5 +1,5 @@
 import { ConversationMessage } from "../types";
-import { BaseAiService } from "./baseAiService";
+import { AiPrompt, BaseAiService } from "./baseAiService";
 
 export interface OpenAiConfig {
   apiKey: string;
@@ -48,25 +48,19 @@ export class OpenAiService extends BaseAiService {
     super();
   }
 
-  async query(
-    query: string,
-    context: string,
-    history: ConversationMessage[] = []
-  ): Promise<string> {
+  async query(prompt: AiPrompt): Promise<string> {
     if (!this.config.apiKey) {
       throw new OpenAiError(
         "Please set your OpenAI API key in settings: Kernel > OpenAI API Key"
       );
     }
 
-    const { system, messages } = this.buildPrompt(query, context, history);
-
     try {
       const response = await this.makeApiRequest({
         model: this.config.model,
         messages: [
-          { role: "system", content: system },
-          ...messages
+          { role: "system", content: prompt.system },
+          ...prompt.messages
         ],
         max_tokens: this.config.maxTokens,
         temperature: this.config.temperature,
