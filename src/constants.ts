@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG = {
   ALWAYS_INCLUDE_FILES: ['kernel_instructions.mdx'],
   CLAUDE_MODEL: 'claude-4-sonnet-20250514',
   OPENAI_MODEL: 'gpt-4.1-mini',
+  GEMINI_MODEL: 'gemini-2.5-flash-preview-05-20',
   MAX_TOKENS: 4000,
   TEMPERATURE: 0.7,
   EMBEDDINGS_PORT: 5000,

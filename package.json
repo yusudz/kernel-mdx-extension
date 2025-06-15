@@ -114,6 +114,20 @@
             "gpt-4o-mini"
           ],
           "description": "OpenAI model to use"
+        },
+        "kernel.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Google Gemini API key (keep this secret!)",
+          "markdownDescription": "Get your API key from [makersuite.google.com](https://makersuite.google.com/app/apikey)"
+        },
+        "kernel.geminiModel": {
+          "type": "string",
+          "default": "gemini-2.5-flash-preview-05-20",
+          "enum": [
+            "gemini-2.5-flash-preview-05-20"
+          ],
+          "description": "Google Gemini model to use for context compression"
         }
       }
     }

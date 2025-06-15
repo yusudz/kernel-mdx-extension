@@ -3,6 +3,7 @@ import * as path from "path";
 import { blockManager } from "../blockManager";
 import { EmbeddingsService } from "./embeddingsService";
 import { OpenAiService } from "./openaiService";
+import { GeminiService } from "./geminiService";
 import { ConversationMessage } from "../types";
 import { DEFAULT_CONFIG } from "../constants";
 
@@ -16,6 +17,7 @@ export interface ContextOptions {
 
 export class ContextService {
   private openAiService?: OpenAiService;
+  private geminiService?: GeminiService;
 
   constructor(private embeddingsService: EmbeddingsService) {
     // Initialize OpenAI service for compression if API key is available
@@ -31,6 +33,19 @@ export class ContextService {
         temperature: DEFAULT_CONFIG.TEMPERATURE,
       });
     }
+
+    // Initialize Gemini service for compression if API key is available
+    const geminiApiKey = config.get<string>("geminiApiKey", "");
+    const geminiModel = config.get<string>("geminiModel", DEFAULT_CONFIG.GEMINI_MODEL);
+
+    if (geminiApiKey) {
+      this.geminiService = new GeminiService({
+        apiKey: geminiApiKey,
+        model: geminiModel,
+        maxOutputTokens: DEFAULT_CONFIG.MAX_TOKENS,
+        temperature: DEFAULT_CONFIG.TEMPERATURE,
+      });
+    }
   }
 
   async gatherContext(options: ContextOptions = {}): Promise<string> {
@@ -38,8 +53,8 @@ export class ContextService {
       editor,
       query,
       alwaysIncludeFiles = this.getAlwaysIncludeFiles(),
-      maxSemanticResults = 10,
-      maxRecentBlocks = 10,
+      maxSemanticResults = 50,
+      maxRecentBlocks = 20,
     } = options;
 
     const contextParts: string[] = [];
@@ -201,14 +216,14 @@ export class ContextService {
     query: string,
     history: ConversationMessage[] = []
   ): Promise<string> {
-    if (!this.openAiService) {
+    if (!this.geminiService) {
       // No compression available, return as-is
-      console.warn("OpenAI service not initialized, skipping context compression.");
+      console.warn("Gemini service not initialized, skipping context compression.");
       return context;
     }
 
     try {
-      return await this.openAiService.compressContext(context, query, history);
+      return await this.geminiService.compressContext(context, query, history);
     } catch (error) {
       console.error("Context compression failed:", error);
       return context; // Return original on failure
