@@ -22,6 +22,11 @@ export abstract class BaseAiService {
     
     const messages: AiMessage[] = [];
 
+     messages.push({
+      role: "user",
+      content: `Here is my current context:\n\n${context}\n\n---\n\nI'll now ask questions about this context.`,
+    });
+
     // Add conversation history (without context)
     history.forEach((msg) => {
       messages.push({
@@ -31,11 +36,16 @@ export abstract class BaseAiService {
     });
 
     // Add current query with its specific context
-    const queryWithContext = `Context:\n${context}\n\nQuery: ${query}`;
+    // const queryWithContext = `Context:\n${context}\n\nQuery: ${query}`;
     
+    // messages.push({
+    //   role: "user",
+    //   content: queryWithContext,
+    // });
+
     messages.push({
-      role: "user",
-      content: queryWithContext,
+        role: "user",
+        content: query,
     });
 
     return { system, messages };
