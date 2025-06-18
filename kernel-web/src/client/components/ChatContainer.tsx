@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { marked } from 'marked';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -39,7 +40,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, isLoading, onSc
     >
       {messages.map((message, index) => (
         <div key={index} className={`message ${message.role}-message`}>
-          {message.content}
+          {message.role === 'assistant' ? (
+            <div dangerouslySetInnerHTML={{ __html: marked(message.content) }} />
+          ) : (
+            message.content
+          )}
         </div>
       ))}
       

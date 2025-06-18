@@ -194,11 +194,13 @@ html, body {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .message {
   margin-bottom: 16px;
-  max-width: 80%;
+  max-width: 75%;
 }
 
 .user-message {
@@ -226,6 +228,10 @@ html, body {
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .message-input {
