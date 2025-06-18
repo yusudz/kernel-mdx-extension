@@ -1,0 +1,39 @@
+{
+  "name": "kernel-web",
+  "version": "0.1.0",
+  "description": "Web-based Kernel MDX chat application",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "kernel",
+    "mdx",
+    "ai",
+    "chat"
+  ],
+  "author": "yurysudz",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "glob": "^11.0.3",
+    "marked": "^9.1.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.3",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

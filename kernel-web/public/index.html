@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Web</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .chat-container {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .user-message {
+            background: #007bff;
+            color: white;
+            margin-left: 20%;
+        }
+        .assistant-message {
+            background: #e9ecef;
+            margin-right: 20%;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kernel Web Chat</h1>
+        
+        <div id="status" class="status">
+            Checking server status...
+        </div>
+        
+        <!-- Auth setup (shown when default token) -->
+        <div id="authSetup" class="auth-setup" style="display: none;">
+            <h3>Setup Required</h3>
+            <p>Please change the default <code>authToken</code> in <code>data/config.json</code></p>
+            <p>Then refresh this page and login with your token.</p>
+        </div>
+        
+        <!-- Login (shown when token exists but not provided) -->
+        <div id="authLogin" class="auth-login" style="display: none;">
+            <h3>Enter Token</h3>
+            <div class="input-container">
+                <input type="password" id="loginToken" placeholder="Enter your auth token" />
+                <button onclick="login()">Login</button>
+            </div>
+        </div>
+        
+        <!-- Main chat interface -->
+        <div id="chatInterface" style="display: none;">
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button onclick="logout()" style="background: #dc3545;">Logout</button>
+            </div>
+            
+            <div id="chat" class="chat-container">
+                <!-- Messages will appear here -->
+            </div>
+            
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Ask something..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conversationId = 'conv_' + Date.now();
+        let authToken = localStorage.getItem('kernelAuthToken');
+        
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                
+                if (data.needsSetup) {
+                    // Default token still set, show setup instructions
+                    document.getElementById('authSetup').style.display = 'block';
+                    document.getElementById('authLogin').style.display = 'none';
+                    document.getElementById('chatInterface').style.display = 'none';
+                } else if (!authToken) {
+                    // Token configured but user hasn't provided it
+                    document.getElementById('authSetup').style.display = 'none';
+                    document.getElementById('authLogin').style.display = 'block';
+                    document.getElementById('chatInterface').style.display = 'none';
+                } else {
+                    // User has token, show chat
+                    document.getElementById('authSetup').style.display = 'none';
+                    document.getElementById('authLogin').style.display = 'none';
+                    document.getElementById('chatInterface').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+        
+        // Remove setupAuth function - no longer needed
+        
+        async function login() {
+            const token = document.getElementById('loginToken').value;
+            
+            if (!token) {
+                alert('Please enter a token');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (data.valid) {
+                    authToken = token;
+                    localStorage.setItem('kernelAuthToken', token);
+                    checkAuthStatus();
+                } else {
+                    alert('Login failed: ' + data.error);
+                    localStorage.removeItem('kernelAuthToken');
+                    authToken = null;
+                }
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+            }
+        }
+        
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('kernelAuthToken');
+            checkAuthStatus();
+        }
+        
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/health', {
+                    headers: authToken ? { 'X-Auth-Token': authToken } : {}
+                });
+                const data = await response.json();
+                const status = document.getElementById('status');
+                
+                if (data.status === 'ok') {
+                    status.textContent = `Server running. Embeddings: ${data.embeddings ? 'Ready' : 'Starting...'}`;
+                    status.className = 'status';
+                } else {
+                    status.textContent = 'Server error';
+                    status.className = 'status error';
+                }
+            } catch (error) {
+                const status = document.getElementById('status');
+                status.textContent = 'Connection error';
+                status.className = 'status error';
+            }
+        }
+        
+        function addMessage(role, content) {
+            const chat = document.getElementById('chat');
+            const message = document.createElement('div');
+            message.className = `message ${role}-message`;
+            message.textContent = content;
+            chat.appendChild(message);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addMessage('user', message);
+            input.value = '';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Auth-Token': authToken
+                    },
+                    body: JSON.stringify({
+                        message,
+                        conversationId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.response) {
+                    addMessage('assistant', data.response);
+                } else if (data.error) {
+                    addMessage('assistant', `Error: ${data.error}`);
+                }
+            } catch (error) {
+                addMessage('assistant', `Connection error: ${error.message}`);
+            }
+        }
+        
+        // Send message on Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Check auth and status on load
+        checkAuthStatus();
+        checkStatus();
+        
+        // Refresh status every 5 seconds
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>
