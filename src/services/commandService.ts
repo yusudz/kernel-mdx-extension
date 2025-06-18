@@ -6,11 +6,14 @@ import { updateDecorations } from "../decorations";
 import { documentParser } from "../parser";
 import { searchBlocksCommand } from "../commands/searchBlocks";
 import { openChatCommand } from "../commands/chat";
-import { COMMANDS, LANGUAGE_ID } from "../constants";
+import { COMMANDS, DEFAULT_CONFIG, LANGUAGE_ID } from "../constants";
 import * as path from "path";
+import { ClaudeService } from "./claudeService";
+import { MobileServer } from "./mobileServer";
 
 export class CommandService {
   private contextService: ContextService;
+  private mobileServer?: MobileServer;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -48,6 +51,14 @@ export class CommandService {
       {
         id: COMMANDS.ADD_BLOCK_ID,
         handler: this.addBlockId.bind(this),
+      },
+      {
+        id: 'kernel-mdx.startMobileServer',
+        handler: this.startMobileServer.bind(this),
+      },
+      {
+        id: 'kernel-mdx.stopMobileServer',
+        handler: this.stopMobileServer.bind(this),
       },
     ];
 
@@ -152,5 +163,52 @@ export class CommandService {
     }
 
     return null;
+  }
+
+  private async startMobileServer(): Promise<void> {
+    if (this.mobileServer) {
+      vscode.window.showInformationMessage('Mobile server is already running');
+      return;
+    }
+  
+    // Get AI service configuration
+    const config = vscode.workspace.getConfiguration('kernel');
+    const apiKey = config.get<string>('claudeApiKey', '');
+    
+    const aiService = new ClaudeService({
+      apiKey,
+      model: config.get<string>('claudeModel', DEFAULT_CONFIG.CLAUDE_MODEL),
+    });
+  
+    this.mobileServer = new MobileServer(
+      aiService,
+      this.contextService,
+      3000
+    );
+  
+    const url = await this.mobileServer.start();
+    
+    // Show notification with QR code option
+    const result = await vscode.window.showInformationMessage(
+      `Mobile server started at ${url}`,
+      'Copy URL',
+      'Show QR Code'
+    );
+  
+    if (result === 'Copy URL') {
+      await vscode.env.clipboard.writeText(url);
+    } else if (result === 'Show QR Code') {
+      // Could open a webview with QR code
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+      await vscode.env.openExternal(vscode.Uri.parse(qrUrl));
+    }
+  }
+  
+  private stopMobileServer(): void {
+    if (this.mobileServer) {
+      this.mobileServer.stop();
+      this.mobileServer = undefined;
+      vscode.window.showInformationMessage('Mobile server stopped');
+    }
   }
 }

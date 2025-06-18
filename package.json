@@ -7,61 +7,91 @@
   "engines": {
     "vscode": "^1.60.0"
   },
-  "categories": ["Programming Languages", "Other"],
-  "keywords": ["mdx", "markdown", "knowledge-graph", "semantic-search", "ai", "claude"],
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "mdx",
+    "markdown",
+    "knowledge-graph",
+    "semantic-search",
+    "ai",
+    "claude"
+  ],
   "activationEvents": [
     "onLanguage:kernel-mdx"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "kernel-mdx",
-      "aliases": ["Kernel MDX"],
-      "extensions": [".mdx"],
-      "configuration": "./language-configuration.json"
-    }],
+    "languages": [
+      {
+        "id": "kernel-mdx",
+        "aliases": [
+          "Kernel MDX"
+        ],
+        "extensions": [
+          ".mdx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
     "foldingRangeProvider": true,
-    "documentLinkProvider": [{
-      "language": "kernel-mdx"
-    }],
-    "commands": [{
-      "command": "kernel-mdx.addBlockId",
-      "title": "Kernel MDX: Add Block ID"
-    },
-    {
-      "command": "kernel-mdx.searchBlocks",
-      "title": "Kernel MDX: Search Blocks"
-    },
-    {
-      "command": "kernel-mdx.flushBlocks",
-      "title": "Kernel MDX: Flush Block Cache"
-    },
-    {
-      "command": "kernel-mdx.parseAllNotes",
-      "title": "Kernel MDX: Parse All Notes"
-    },
-    {
-      "command": "kernel-mdx.openChat",
-      "title": "Kernel: Open Chat"
-    },
-    {
-      "command": "kernel-mdx.copyContext",
-      "title": "Kernel: Copy Current Context to Clipboard"
-    },
-    {
-      "command": "kernel-mdx.setupEmbeddings",
-      "title": "Kernel: Setup Embeddings Server"
-    }],
-    "keybindings": [{
-      "command": "kernel-mdx.addBlockId",
-      "key": "ctrl+shift+i",
-      "when": "editorTextFocus && editorLangId == kernel-mdx"
-    },
-    {
-      "command": "kernel-mdx.searchBlocks",
-      "key": "ctrl+shift+f",
-      "when": "editorTextFocus && editorLangId == kernel-mdx"
-    }],
+    "documentLinkProvider": [
+      {
+        "language": "kernel-mdx"
+      }
+    ],
+    "commands": [
+      {
+        "command": "kernel-mdx.addBlockId",
+        "title": "Kernel MDX: Add Block ID"
+      },
+      {
+        "command": "kernel-mdx.searchBlocks",
+        "title": "Kernel MDX: Search Blocks"
+      },
+      {
+        "command": "kernel-mdx.flushBlocks",
+        "title": "Kernel MDX: Flush Block Cache"
+      },
+      {
+        "command": "kernel-mdx.parseAllNotes",
+        "title": "Kernel MDX: Parse All Notes"
+      },
+      {
+        "command": "kernel-mdx.openChat",
+        "title": "Kernel: Open Chat"
+      },
+      {
+        "command": "kernel-mdx.copyContext",
+        "title": "Kernel: Copy Current Context to Clipboard"
+      },
+      {
+        "command": "kernel-mdx.setupEmbeddings",
+        "title": "Kernel: Setup Embeddings Server"
+      },
+      {
+        "command": "kernel-mdx.startMobileServer",
+        "title": "Kernel: Start Mobile Server"
+      },
+      {
+        "command": "kernel-mdx.stopMobileServer",
+        "title": "Kernel: Stop Mobile Server"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kernel-mdx.addBlockId",
+        "key": "ctrl+shift+i",
+        "when": "editorTextFocus && editorLangId == kernel-mdx"
+      },
+      {
+        "command": "kernel-mdx.searchBlocks",
+        "key": "ctrl+shift+f",
+        "when": "editorTextFocus && editorLangId == kernel-mdx"
+      }
+    ],
     "configuration": {
       "title": "Kernel",
       "properties": {
@@ -89,7 +119,9 @@
         },
         "kernel.alwaysIncludeFiles": {
           "type": "array",
-          "default": ["kernel_instructions.mdx"],
+          "default": [
+            "kernel_instructions.mdx"
+          ],
           "description": "Files to always include in context",
           "items": {
             "type": "string"
@@ -138,10 +170,17 @@
     "prepublish": "npm run build"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^16.0.0",
     "@types/vscode": "^1.60.0",
     "typescript": "^4.0.0"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "marked": "^15.0.12"
+  }
 }
