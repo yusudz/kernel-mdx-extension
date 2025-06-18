@@ -76,6 +76,36 @@
             color: #721c24;
             border-color: #f5c6cb;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+        .conversation-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .conversation-item:hover {
+            background: #f5f5f5;
+        }
     </style>
 </head>
 <body>
@@ -104,8 +134,15 @@
         
         <!-- Main chat interface -->
         <div id="chatInterface" style="display: none;">
-            <div style="text-align: right; margin-bottom: 10px;">
-                <button onclick="logout()" style="background: #dc3545;">Logout</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                    <button onclick="newConversation()" style="background: #28a745;">New Chat</button>
+                    <button onclick="showConversations()" style="background: #6c757d;">Conversations</button>
+                </div>
+                <div>
+                    <span id="conversationTitle" style="font-weight: bold;"></span>
+                    <button onclick="logout()" style="background: #dc3545; margin-left: 10px;">Logout</button>
+                </div>
             </div>
             
             <div id="chat" class="chat-container">
@@ -117,10 +154,24 @@
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
+        
+        <!-- Conversations Modal -->
+        <div id="conversationsModal" class="modal">
+            <div class="modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>Conversations</h3>
+                    <button onclick="closeConversationsModal()" style="background: #6c757d;">Close</button>
+                </div>
+                <div id="conversationsList">
+                    Loading conversations...
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let conversationId = 'conv_' + Date.now();
+        let conversationId = null;
+        let currentConversation = null;
         let authToken = localStorage.getItem('kernelAuthToken');
         
         async function checkAuthStatus() {
@@ -143,6 +194,9 @@
                     document.getElementById('authSetup').style.display = 'none';
                     document.getElementById('authLogin').style.display = 'none';
                     document.getElementById('chatInterface').style.display = 'block';
+                    
+                    // Load conversation from URL or create new one
+                    await loadConversationFromUrl();
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
@@ -188,6 +242,131 @@
             checkAuthStatus();
         }
         
+        async function loadConversationFromUrl() {
+            const urlParts = window.location.pathname.split('/');
+            
+            if (urlParts.length >= 3 && urlParts[1] === 'chat') {
+                // URL like /chat/conv_123
+                const convId = urlParts[2];
+                await loadConversation(convId);
+            } else {
+                // No conversation in URL, create new one
+                await newConversation();
+            }
+        }
+        
+        async function loadConversation(convId) {
+            try {
+                const response = await fetch(`/api/conversations/${convId}`, {
+                    headers: { 'X-Auth-Token': authToken }
+                });
+                
+                if (response.ok) {
+                    currentConversation = await response.json();
+                    conversationId = convId;
+                    displayConversation();
+                    updateUrl();
+                } else {
+                    // Conversation not found, create new one
+                    await newConversation();
+                }
+            } catch (error) {
+                console.error('Failed to load conversation:', error);
+                await newConversation();
+            }
+        }
+        
+        async function newConversation() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Auth-Token': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    currentConversation = await response.json();
+                    conversationId = currentConversation.id;
+                    displayConversation();
+                    updateUrl();
+                }
+            } catch (error) {
+                console.error('Failed to create conversation:', error);
+            }
+        }
+        
+        function displayConversation() {
+            const chat = document.getElementById('chat');
+            const titleElement = document.getElementById('conversationTitle');
+            
+            // Clear chat
+            chat.innerHTML = '';
+            
+            // Set title
+            titleElement.textContent = currentConversation ? currentConversation.title : 'New Conversation';
+            
+            // Display messages
+            if (currentConversation && currentConversation.messages) {
+                currentConversation.messages.forEach(msg => {
+                    addMessage(msg.role, msg.content);
+                });
+            }
+        }
+        
+        function updateUrl() {
+            if (conversationId) {
+                const newUrl = `/chat/${conversationId}`;
+                window.history.pushState({}, '', newUrl);
+            }
+        }
+        
+        async function showConversations() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    headers: { 'X-Auth-Token': authToken }
+                });
+                
+                if (response.ok) {
+                    const conversations = await response.json();
+                    displayConversationsList(conversations);
+                    document.getElementById('conversationsModal').style.display = 'block';
+                } else {
+                    alert('Failed to load conversations');
+                }
+            } catch (error) {
+                console.error('Failed to load conversations:', error);
+                alert('Failed to load conversations');
+            }
+        }
+        
+        function displayConversationsList(conversations) {
+            const listElement = document.getElementById('conversationsList');
+            
+            if (conversations.length === 0) {
+                listElement.innerHTML = '<p>No conversations yet.</p>';
+                return;
+            }
+            
+            listElement.innerHTML = conversations.map(conv => `
+                <div class="conversation-item" onclick="loadConversationFromList('${conv.id}')">
+                    <strong>${conv.title}</strong>
+                    <br>
+                    <small>${conv.messages.length} messages • ${new Date(conv.updatedAt).toLocaleDateString()}</small>
+                </div>
+            `).join('');
+        }
+        
+        async function loadConversationFromList(convId) {
+            closeConversationsModal();
+            await loadConversation(convId);
+        }
+        
+        function closeConversationsModal() {
+            document.getElementById('conversationsModal').style.display = 'none';
+        }
+        
         async function checkStatus() {
             try {
                 const response = await fetch('/api/health', {
@@ -197,7 +376,7 @@
                 const status = document.getElementById('status');
                 
                 if (data.status === 'ok') {
-                    status.textContent = `Server running. Embeddings: ${data.embeddings ? 'Ready' : 'Starting...'}`;
+                    status.textContent = `Server running. Blocks: ${data.blocks || 0}. Embeddings: ${data.embeddings ? 'Ready' : 'Starting...'}`;
                     status.className = 'status';
                 } else {
                     status.textContent = 'Server error';
@@ -223,8 +402,9 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (!message) return;
+            if (!message || !conversationId) return;
             
+            // Optimistically add user message
             addMessage('user', message);
             input.value = '';
             
@@ -245,6 +425,13 @@
                 
                 if (data.response) {
                     addMessage('assistant', data.response);
+                    
+                    // Update current conversation from server response
+                    if (data.conversation) {
+                        currentConversation = data.conversation;
+                        // Update title if it changed
+                        document.getElementById('conversationTitle').textContent = currentConversation.title;
+                    }
                 } else if (data.error) {
                     addMessage('assistant', `Error: ${data.error}`);
                 }
