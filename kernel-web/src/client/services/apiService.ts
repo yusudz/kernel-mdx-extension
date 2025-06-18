@@ -24,6 +24,27 @@ interface HealthStatus {
   blocks: number;
 }
 
+interface SearchRequest {
+  query: string;
+  semantic?: boolean;
+  maxResults?: number;
+  minScore?: number;
+}
+
+interface SearchResult {
+  id: string;
+  content: string;
+  file: string;
+  line: number;
+  score?: number;
+}
+
+interface SearchResponse {
+  blocks: SearchResult[];
+  searchType: 'text' | 'semantic';
+  embeddingsReady: boolean;
+}
+
 class ApiService {
   private getAuthHeaders() {
     const token = localStorage.getItem('kernelAuthToken');
@@ -115,6 +136,23 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error('Failed to save block');
+    }
+
+    return response.json();
+  }
+
+  async searchBlocks(request: SearchRequest): Promise<SearchResponse> {
+    const response = await fetch('/api/blocks/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to search blocks');
     }
 
     return response.json();

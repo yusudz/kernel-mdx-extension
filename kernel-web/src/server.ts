@@ -270,7 +270,7 @@ app.get('/api/blocks/:id', (req, res) => {
 
 app.post('/api/blocks/search', async (req, res) => {
   try {
-    const { query, semantic = true, maxResults = 10, minScore = 0.3 } = req.body;
+    const { query, semantic = true, maxResults = 20, minScore = 0.0 } = req.body;
     if (!query) {
       res.status(400).json({ error: 'Query is required' });
       return;
@@ -287,7 +287,10 @@ app.post('/api/blocks/search', async (req, res) => {
       const results = await embeddingsService.findSimilar(query, blockData, maxResults);
       blocks = results
         .filter(result => result.score >= minScore)
-        .map(result => allBlocks[result.index]);
+        .map(result => ({
+          ...allBlocks[result.index],
+          score: result.score
+        }));
       searchType = 'semantic';
     } else {
       // Fallback to text search

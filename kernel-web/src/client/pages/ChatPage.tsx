@@ -9,6 +9,7 @@ import ChatContainer from '../components/ChatContainer';
 import MessageInput from '../components/MessageInput';
 import ConversationsModal from '../components/ConversationsModal';
 import SaveBlockModal from '../components/SaveBlockModal';
+import SearchModal from '../components/SearchModal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -35,6 +36,7 @@ const ChatPage: React.FC = () => {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
   const [showSaveBlock, setShowSaveBlock] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -164,6 +166,7 @@ const ChatPage: React.FC = () => {
         conversationTitle={conversation?.title || 'New Conversation'}
         onNewConversation={createNewConversation}
         onShowConversations={() => setShowConversations(true)}
+        onShowSearch={() => setShowSearch(true)}
         isCollapsed={headerCollapsed}
       />
       
@@ -192,6 +195,11 @@ const ChatPage: React.FC = () => {
         isOpen={showSaveBlock}
         onClose={() => setShowSaveBlock(false)}
         initialContent={saveBlockContent}
+      />
+      
+      <SearchModal
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
       />
     </div>
   );

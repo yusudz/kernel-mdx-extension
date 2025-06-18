@@ -503,3 +503,161 @@ html, body {
     white-space: nowrap;
   }
 }
+
+/* Search Modal Styles */
+.search-modal {
+  max-width: 800px;
+}
+
+.search-form {
+  margin-bottom: 20px;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.search-btn {
+  padding: 12px 20px;
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.search-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.search-results {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.results-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.results-header h3 {
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.results-header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.search-result {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #fafafa;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.result-number {
+  font-weight: bold;
+  color: #666;
+}
+
+.result-id {
+  font-family: 'Monaco', 'Menlo', monospace;
+  background: #e8f4fd;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #007acc;
+}
+
+.result-score {
+  font-size: 12px;
+  color: #888;
+  margin-left: auto;
+}
+
+.result-file {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.result-content {
+  white-space: pre-wrap;
+  line-height: 1.4;
+  color: #333;
+  background: white;
+  padding: 12px;
+  border-radius: 3px;
+  border-left: 3px solid #007acc;
+  font-size: 14px;
+}
+
+.no-results {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+  font-style: italic;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #fcc;
+}
+
+/* Mobile responsive for search */
+@media (max-width: 768px) {
+  
+  .search-input-group {
+    flex-direction: column;
+  }
+  
+  .search-btn {
+    min-width: auto;
+  }
+  
+  .result-header {
+    font-size: 14px;
+  }
+  
+  .result-score {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}

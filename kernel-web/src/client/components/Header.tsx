@@ -6,6 +6,7 @@ interface HeaderProps {
   conversationTitle: string;
   onNewConversation: () => void;
   onShowConversations: () => void;
+  onShowSearch: () => void;
   isCollapsed: boolean;
 }
 
@@ -13,6 +14,7 @@ const Header: React.FC<HeaderProps> = ({
   conversationTitle, 
   onNewConversation, 
   onShowConversations,
+  onShowSearch,
   isCollapsed 
 }) => {
   const { logout } = useAuth();
@@ -64,6 +66,9 @@ const Header: React.FC<HeaderProps> = ({
           </button>
           <button className="btn-secondary" onClick={onShowConversations}>
             Conversations
+          </button>
+          <button className="btn-secondary" onClick={onShowSearch}>
+            Search Blocks
           </button>
           <button className="btn-danger" onClick={logout}>
             Logout
