@@ -11,7 +11,7 @@ import { createAuthMiddleware } from './middleware/auth';
 import { BlockParser } from './services/BlockParser';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Services
 const configManager = new ConfigManager();
@@ -331,7 +331,7 @@ async function startServer() {
     console.log('Embeddings server started successfully');
     
     // Start web server
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Kernel Web server running on http://localhost:${PORT}`);
       console.log(`Embeddings server: ${embeddingsServer.getBaseUrl()}`);
       console.log(`Blocks loaded: ${blockParser.size}`);
