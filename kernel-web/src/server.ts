@@ -9,6 +9,9 @@ import { GeminiService } from './services/ai/GeminiService';
 import { PythonServerManager } from './services/PythonServerManager';
 import { createAuthMiddleware } from './middleware/auth';
 import { BlockParser } from './services/BlockParser';
+import { EmbeddingsService } from './services/EmbeddingsService';
+import { ContextService } from './services/ContextService';
+import * as chokidar from 'chokidar';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -68,6 +71,10 @@ const embeddingsServer = new PythonServerManager({
   }
 });
 
+// Initialize embeddings and context services after server manager
+const embeddingsService = new EmbeddingsService(embeddingsServer);
+const contextService = new ContextService(embeddingsService, blockParser, configManager, fileStorage);
+
 // Check auth status (no auth required)
 app.get('/api/auth/status', (req, res) => {
   const authToken = configManager.get('authToken');
@@ -116,7 +123,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    embeddings: embeddingsServer.isReady(),
+    embeddings: embeddingsService.isReady(),
+    embeddingsCache: embeddingsService.getCacheStats(),
     blocks: blockParser.size
   });
 });
@@ -152,13 +160,10 @@ app.post('/api/chat', async (req, res) => {
     // Get conversation history for AI context
     const conversationHistory = conversation ? conversation.messages : [];
 
-    // Build context from relevant blocks
-    const relevantBlocks = blockParser.searchBlocks(message);
-    const blockContext = relevantBlocks.length > 0 
-      ? relevantBlocks.map(block => `[${block.content}] @${block.id}`).join('\n\n')
-      : "No relevant blocks found";
-    
-    const context = `Available knowledge blocks:\n\n${blockContext}`;
+    // Build context using the sophisticated ContextService
+    const context = await contextService.gatherContext({
+      query: message,
+    });
     
     // Default to Claude, but could be made configurable
     const aiService = getAiService('claude');
@@ -263,17 +268,40 @@ app.get('/api/blocks/:id', (req, res) => {
   }
 });
 
-app.post('/api/blocks/search', (req, res) => {
+app.post('/api/blocks/search', async (req, res) => {
   try {
-    const { query } = req.body;
+    const { query, semantic = true, maxResults = 10, minScore = 0.3 } = req.body;
     if (!query) {
       res.status(400).json({ error: 'Query is required' });
       return;
     }
     
-    const blocks = blockParser.searchBlocks(query);
-    res.json(blocks);
+    let blocks;
+    let searchType = 'text';
+    
+    if (semantic && embeddingsService.isReady()) {
+      // Use semantic search via EmbeddingsService
+      const allBlocks = blockParser.getAllBlocks();
+      const blockData = allBlocks.map(block => ({ id: block.id, content: block.content }));
+      
+      const results = await embeddingsService.findSimilar(query, blockData, maxResults);
+      blocks = results
+        .filter(result => result.score >= minScore)
+        .map(result => allBlocks[result.index]);
+      searchType = 'semantic';
+    } else {
+      // Fallback to text search
+      blocks = blockParser.searchBlocks(query).slice(0, maxResults);
+    }
+    
+    res.json({ 
+      blocks, 
+      searchType,
+      embeddingsReady: embeddingsService.isReady(),
+      cacheStats: embeddingsService.getCacheStats()
+    });
   } catch (error) {
+    console.error('Search error:', error);
     res.status(500).json({ error: 'Failed to search blocks' });
   }
 });
@@ -317,6 +345,84 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// File watching setup
+function setupFileWatching(): void {
+  const blocksDir = configManager.get('notesFolder') || './data/blocks';
+  const filePattern = configManager.get('filePattern') || '**/*.mdx';
+  
+  console.log(`Watching ${blocksDir}/${filePattern} for changes...`);
+  
+  const watcher = chokidar.watch(path.join(blocksDir, filePattern), {
+    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    persistent: true,
+    ignoreInitial: true, // don't trigger on startup
+    usePolling: false,
+    interval: 1000,
+  });
+
+  let isProcessing = false;
+  const debounceTime = 500; // ms
+  let debounceTimer: NodeJS.Timeout | null = null;
+
+  const processFileChange = async (filePath: string, event: string) => {
+    if (isProcessing) return;
+    
+    try {
+      isProcessing = true;
+      console.log(`File ${event}: ${filePath}`);
+      
+      // Clear embeddings cache for blocks from this file
+      const existingBlocks = blockParser.getBlocksFromFile(filePath);
+      if (existingBlocks.length > 0) {
+        const blockIds = existingBlocks.map(block => block.id);
+        embeddingsService.clearMultipleFromCache(blockIds);
+        console.log(`Cleared embeddings cache for ${blockIds.length} blocks`);
+      }
+      
+      // Re-parse the specific file
+      if (event !== 'unlink') {
+        await blockParser.parseFile(filePath);
+        console.log(`Re-parsed ${filePath}, total blocks: ${blockParser.size}`);
+      } else {
+        // File was deleted - blocks are automatically removed by parseFile
+        console.log(`File deleted: ${filePath}, total blocks: ${blockParser.size}`);
+      }
+      
+    } catch (error) {
+      console.error(`Error processing file change for ${filePath}:`, error);
+    } finally {
+      isProcessing = false;
+    }
+  };
+
+  const debouncedProcess = (filePath: string, event: string) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      processFileChange(filePath, event);
+    }, debounceTime);
+  };
+
+  watcher
+    .on('add', (filePath) => debouncedProcess(filePath, 'added'))
+    .on('change', (filePath) => debouncedProcess(filePath, 'changed'))
+    .on('unlink', (filePath) => debouncedProcess(filePath, 'unlink'))
+    .on('error', (error) => console.error('File watcher error:', error))
+    .on('ready', () => console.log('File watcher ready'));
+
+  // Cleanup on server shutdown
+  process.on('SIGINT', () => {
+    console.log('Closing file watcher...');
+    watcher.close();
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('Closing file watcher...');
+    watcher.close();
+  });
+}
+
 // Start server
 async function startServer() {
   try {
@@ -330,11 +436,16 @@ async function startServer() {
     await embeddingsServer.start();
     console.log('Embeddings server started successfully');
     
+    // Setup file watching for MDX files
+    console.log('Setting up file watching...');
+    setupFileWatching();
+    
     // Start web server
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Kernel Web server running on http://localhost:${PORT}`);
       console.log(`Embeddings server: ${embeddingsServer.getBaseUrl()}`);
       console.log(`Blocks loaded: ${blockParser.size}`);
+      console.log('File watching active for .mdx files');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

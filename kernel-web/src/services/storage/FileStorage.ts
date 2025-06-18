@@ -28,6 +28,11 @@ export class FileStorage {
     return glob(fullPattern);
   }
 
+  async findFiles(filename: string): Promise<string[]> {
+    const fullPattern = path.join(this.blocksDir, '**', filename);
+    return glob(fullPattern);
+  }
+
   async readFile(filePath: string): Promise<string> {
     try {
       return fs.readFileSync(filePath, 'utf-8');
