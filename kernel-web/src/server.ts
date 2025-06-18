@@ -161,11 +161,25 @@ app.post('/api/chat', async (req, res) => {
     const conversationHistory = conversation ? conversation.messages : [];
 
     // Build context using the sophisticated ContextService
-    const context = await contextService.gatherContext({
+    let context = await contextService.gatherContext({
       query: message,
     });
     
-    // Default to Claude, but could be made configurable
+    // Use Gemini for context compression, then Claude for final response
+    const geminiApiKey = configManager.get('geminiApiKey');
+    if (geminiApiKey) {
+      const geminiService = new GeminiService({ 
+        apiKey: geminiApiKey, 
+        model: configManager.get('geminiModel') 
+      });
+      context = await geminiService.compressContext(
+        context, 
+        message, 
+        conversationHistory
+      );
+    }
+    
+    // Always use Claude for final response
     const aiService = getAiService('claude');
     const response = await aiService.queryWithContext(message, context, conversationHistory);
     
@@ -311,11 +325,22 @@ app.post('/api/blocks/search', async (req, res) => {
 
 app.post('/api/blocks', async (req, res) => {
   try {
-    const { id, content, filename } = req.body;
+    let { id, content, filename } = req.body;
     
-    if (!id || !content) {
-      res.status(400).json({ error: 'ID and content are required' });
+    if (!content) {
+      res.status(400).json({ error: 'Content is required' });
       return;
+    }
+    
+    // Generate ID if not provided
+    if (!id) {
+      id = blockParser.generateId();
+    } else {
+      // Check for ID collision if user provided one
+      if (blockParser.getBlock(id)) {
+        res.status(400).json({ error: `Block ID '${id}' already exists. Please choose a different ID.` });
+        return;
+      }
     }
     
     const filePath = await fileStorage.createBlock(id, content, filename);
@@ -323,7 +348,7 @@ app.post('/api/blocks', async (req, res) => {
     // Re-parse the file to update blocks
     await blockParser.parseFile(filePath);
     
-    res.json({ success: true, filePath, blockCount: blockParser.size });
+    res.json({ success: true, filePath, blockCount: blockParser.size, generatedId: id });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create block' });
   }

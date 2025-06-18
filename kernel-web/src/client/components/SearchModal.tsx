@@ -85,7 +85,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder='e.g., "Should I eat out?", "panic attack", "3am thoughts"'
+              placeholder='e.g., "Paris", "swimming", "food"'
               className="search-input"
               disabled={loading}
             />

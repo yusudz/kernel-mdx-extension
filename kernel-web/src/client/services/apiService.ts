@@ -120,7 +120,7 @@ class ApiService {
     return response.json();
   }
 
-  async saveBlock(content: string, id?: string, filename?: string): Promise<{ success: boolean; blockCount: number }> {
+  async saveBlock(content: string, id?: string, filename?: string): Promise<{ success: boolean; blockCount: number; generatedId?: string }> {
     const response = await fetch('/api/blocks', {
       method: 'POST',
       headers: {
@@ -129,8 +129,8 @@ class ApiService {
       },
       body: JSON.stringify({
         content,
-        id: id || `block_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-        filename
+        ...(id && { id }),  // Only include ID if provided
+        ...(filename && { filename })  // Only include filename if provided
       })
     });
 

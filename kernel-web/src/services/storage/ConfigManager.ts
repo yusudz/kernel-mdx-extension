@@ -17,8 +17,8 @@ export class ConfigManager {
       filePattern: '**/*.mdx',
       claudeModel: 'claude-4-sonnet-20250514',
       openaiModel: 'gpt-4.1-mini',
-      geminiModel: 'gemini-2.5-flash-preview-05-20',
-      alwaysIncludeFiles: ['kernel_instructions.mdx'],
+      geminiModel: 'gemini-2.5-flash',
+      alwaysIncludeFiles: [],
       authToken: 'your-secret-token-here'
     };
 

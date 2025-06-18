@@ -61,7 +61,10 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
       );
       
       if (result.success) {
-        alert(`Block saved successfully! ${result.blockCount} total blocks.`);
+        const idMessage = result.generatedId && !blockId.trim() 
+          ? ` Generated ID: ${result.generatedId}.` 
+          : '';
+        alert(`Block saved successfully!${idMessage} ${result.blockCount} total blocks.`);
         onClose();
       }
     } catch (error) {
@@ -105,7 +108,7 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
         </div>
         
         <div className="form-group">
-          <label className="form-label">Block ID:</label>
+          <label className="form-label">Block ID (optional):</label>
           <input
             type="text"
             className="form-input"
