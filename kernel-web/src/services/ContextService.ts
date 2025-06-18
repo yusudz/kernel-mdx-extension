@@ -1,11 +1,8 @@
 import { EmbeddingsService } from "./EmbeddingsService";
-import { OpenAiService } from "./ai/OpenAiService";
-import { GeminiService } from "./ai/GeminiService";
 import { BlockParser } from "./BlockParser";
 import { ConfigManager } from "./storage/ConfigManager";
 import { FileStorage } from "./storage/FileStorage";
 import { ConversationMessage } from "../types";
-import * as path from "path";
 import * as fs from "fs/promises";
 
 export interface ContextOptions {
@@ -17,52 +14,14 @@ export interface ContextOptions {
   maxRecentBlocks?: number;
 }
 
-const DEFAULT_CONFIG = {
-  OPENAI_MODEL: 'gpt-4',
-  GEMINI_MODEL: 'gemini-pro',
-  MAX_TOKENS: 4096,
-  TEMPERATURE: 0.7
-};
-
 export class ContextService {
-  private openAiService?: OpenAiService;
-  private geminiService?: GeminiService;
-
   constructor(
     private embeddingsService: EmbeddingsService,
     private blockParser: BlockParser,
     private configManager: ConfigManager,
     private fileStorage: FileStorage
   ) {
-    this.initializeAiServices();
-  }
-
-  private initializeAiServices(): void {
-    // Initialize OpenAI service for compression if API key is available
-    const openAiApiKey = this.configManager.get('openaiApiKey');
-    const openAiModel = this.configManager.get('openaiModel') || DEFAULT_CONFIG.OPENAI_MODEL;
-
-    if (openAiApiKey) {
-      this.openAiService = new OpenAiService({
-        apiKey: openAiApiKey,
-        model: openAiModel,
-        maxTokens: DEFAULT_CONFIG.MAX_TOKENS,
-        temperature: DEFAULT_CONFIG.TEMPERATURE,
-      });
-    }
-
-    // Initialize Gemini service for compression if API key is available
-    const geminiApiKey = this.configManager.get('geminiApiKey');
-    const geminiModel = this.configManager.get('geminiModel') || DEFAULT_CONFIG.GEMINI_MODEL;
-
-    if (geminiApiKey) {
-      this.geminiService = new GeminiService({
-        apiKey: geminiApiKey,
-        model: geminiModel,
-        maxOutputTokens: DEFAULT_CONFIG.MAX_TOKENS,
-        temperature: DEFAULT_CONFIG.TEMPERATURE,
-      });
-    }
+    
   }
 
   async gatherContext(options: ContextOptions = {}): Promise<string> {
@@ -222,24 +181,5 @@ export class ContextService {
       .join("\n\n");
 
     return recentBlocks;
-  }
-
-  async compressContext(
-    context: string,
-    query: string,
-    history: ConversationMessage[] = []
-  ): Promise<string> {
-    if (!this.geminiService) {
-      // No compression available, return as-is
-      console.warn("Gemini service not initialized, skipping context compression.");
-      return context;
-    }
-
-    try {
-      return await this.geminiService.compressContext(context, query, history);
-    } catch (error) {
-      console.error("Context compression failed:", error);
-      return context; // Return original on failure
-    }
   }
 }
