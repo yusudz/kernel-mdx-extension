@@ -14,7 +14,6 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
 }) => {
   const [content, setContent] = useState('');
   const [blockId, setBlockId] = useState('');
-  const [filename, setFilename] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -33,7 +32,6 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
     if (isOpen) {
       setContent(initialContent);
       setBlockId('');
-      setFilename('');
       setError('');
     }
   }, [isOpen, initialContent]);
@@ -56,8 +54,7 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
     try {
       const result = await apiService.saveBlock(
         content.trim(),
-        blockId.trim() || undefined,
-        filename.trim() || undefined
+        blockId.trim() || undefined
       );
       
       if (result.success) {
@@ -115,18 +112,6 @@ const SaveBlockModal: React.FC<SaveBlockModalProps> = ({
             placeholder="auto-generated if empty"
             value={blockId}
             onChange={(e) => setBlockId(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label className="form-label">Filename (optional):</label>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="auto-generated if empty"
-            value={filename}
-            onChange={(e) => setFilename(e.target.value)}
             disabled={isLoading}
           />
         </div>

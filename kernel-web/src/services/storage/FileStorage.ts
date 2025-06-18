@@ -6,16 +6,20 @@ import { Block, Conversation, ConversationMessage } from '../../types';
 export class FileStorage {
   private blocksDir: string;
   private conversationsDir: string;
+  private logDir: string;
+  private logOrganizedDir: string;
 
   constructor(baseDir: string = './data') {
     this.blocksDir = path.resolve(baseDir, 'blocks');
     this.conversationsDir = path.resolve(baseDir, 'conversations');
+    this.logDir = path.resolve(baseDir, 'log');
+    this.logOrganizedDir = path.resolve(baseDir, 'log_organized');
     
     this.ensureDirectories();
   }
 
   private ensureDirectories(): void {
-    [this.blocksDir, this.conversationsDir].forEach(dir => {
+    [this.blocksDir, this.conversationsDir, this.logDir, this.logOrganizedDir].forEach(dir => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -146,6 +150,65 @@ export class FileStorage {
     }
   }
 
+  // Log-based file management
+  findCurrentActiveLogFile(): string {
+    try {
+      const logFiles = fs.readdirSync(this.logDir)
+        .filter(file => file.endsWith('.mdx') && /^\d+\.mdx$/.test(file))
+        .map(file => parseInt(path.basename(file, '.mdx')))
+        .filter(num => !isNaN(num))
+        .sort((a, b) => b - a); // Sort descending
+      
+      if (logFiles.length === 0) {
+        // No log files exist, create the first one
+        const firstLogPath = path.join(this.logDir, '1.mdx');
+        fs.writeFileSync(firstLogPath, '');
+        return firstLogPath;
+      }
+      
+      // Return the highest numbered log file
+      const currentLogNumber = logFiles[0];
+      return path.join(this.logDir, `${currentLogNumber}.mdx`);
+    } catch (error) {
+      // If error, create first log file
+      const firstLogPath = path.join(this.logDir, '1.mdx');
+      fs.writeFileSync(firstLogPath, '');
+      return firstLogPath;
+    }
+  }
+
+  async appendBlockToActiveLog(id: string, content: string): Promise<string> {
+    const activeLogPath = this.findCurrentActiveLogFile();
+    const blockContent = `[${content}] @${id}\n\n`;
+    
+    try {
+      fs.appendFileSync(activeLogPath, blockContent);
+      return activeLogPath;
+    } catch (error) {
+      throw new Error(`Failed to append block to active log: ${error}`);
+    }
+  }
+
+  getOrganizedLogFiles(): string[] {
+    try {
+      return fs.readdirSync(this.logOrganizedDir)
+        .filter(file => file.endsWith('.mdx'))
+        .map(file => path.join(this.logOrganizedDir, file))
+        .sort(); // Sort to ensure consistent order
+    } catch (error) {
+      return [];
+    }
+  }
+
+  getCurrentActiveLogContent(): string {
+    try {
+      const activeLogPath = this.findCurrentActiveLogFile();
+      return fs.readFileSync(activeLogPath, 'utf-8');
+    } catch (error) {
+      return '';
+    }
+  }
+
   // Utility methods
   getBlocksDirectory(): string {
     return this.blocksDir;
@@ -153,5 +216,13 @@ export class FileStorage {
 
   getConversationsDirectory(): string {
     return this.conversationsDir;
+  }
+
+  getLogDirectory(): string {
+    return this.logDir;
+  }
+
+  getLogOrganizedDirectory(): string {
+    return this.logOrganizedDir;
   }
 }

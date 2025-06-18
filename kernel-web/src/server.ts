@@ -325,7 +325,7 @@ app.post('/api/blocks/search', async (req, res) => {
 
 app.post('/api/blocks', async (req, res) => {
   try {
-    let { id, content, filename } = req.body;
+    let { id, content } = req.body;
     
     if (!content) {
       res.status(400).json({ error: 'Content is required' });
@@ -343,9 +343,10 @@ app.post('/api/blocks', async (req, res) => {
       }
     }
     
-    const filePath = await fileStorage.createBlock(id, content, filename);
+    // Use log-based storage: append to active log file instead of creating individual files
+    const filePath = await fileStorage.appendBlockToActiveLog(id, content);
     
-    // Re-parse the file to update blocks
+    // Re-parse the active log file to update blocks
     await blockParser.parseFile(filePath);
     
     res.json({ success: true, filePath, blockCount: blockParser.size, generatedId: id });

@@ -68,13 +68,10 @@ export class ContextService {
       }
     }
 
-    // 5. Recent blocks
-    const recentBlocks = this.getRecentBlocks(
-      includedBlockIds,
-      maxRecentBlocks
-    );
-    if (recentBlocks) {
-      contextParts.push(`\n// Recent blocks\n${recentBlocks}`);
+    // 5. Log-based context (organized logs + current active log)
+    const logContext = await this.getLogBasedContext();
+    if (logContext.length > 0) {
+      contextParts.push(...logContext);
     }
 
     return contextParts.join("\n\n---\n\n");
@@ -169,17 +166,34 @@ export class ContextService {
     return parts;
   }
 
-  private getRecentBlocks(
-    includedBlockIds: Set<string>,
-    maxBlocks: number
-  ): string {
-    const blocks = this.blockParser.getAllBlocks();
-    const recentBlocks = blocks
-      .filter(block => !includedBlockIds.has(block.id))
-      .slice(-maxBlocks)
-      .map(block => `@${block.id}: ${block.content}`)
-      .join("\n\n");
-
-    return recentBlocks;
+  private async getLogBasedContext(): Promise<string[]> {
+    const contextParts: string[] = [];
+    
+    try {
+      // 1. Include all organized log files
+      const organizedLogFiles = this.fileStorage.getOrganizedLogFiles();
+      for (const filePath of organizedLogFiles) {
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          if (content.trim()) {
+            const fileName = filePath.split('/').pop() || 'organized_log';
+            contextParts.push(`// Organized log: ${fileName}\n${content.trim()}`);
+          }
+        } catch (error) {
+          console.error(`Failed to read organized log file ${filePath}:`, error);
+        }
+      }
+      
+      // 2. Include current active log content
+      const activeLogContent = this.fileStorage.getCurrentActiveLogContent();
+      if (activeLogContent.trim()) {
+        contextParts.push(`// Current active log\n${activeLogContent.trim()}`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to gather log-based context:', error);
+    }
+    
+    return contextParts;
   }
 }

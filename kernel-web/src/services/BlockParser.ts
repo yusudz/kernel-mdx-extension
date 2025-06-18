@@ -22,16 +22,32 @@ export class BlockParser {
   ) {}
 
   async parseAllFiles(): Promise<void> {
-    const pattern = this.configManager.get('filePattern');
-    const files = await this.fileStorage.findMdxFiles(pattern);
-    
-    console.log(`Parsing ${files.length} MDX files...`);
-    
     // Clear existing blocks
     this.blockMap.clear();
     this.fileIndex.clear();
     
-    for (const filePath of files) {
+    const allFiles: string[] = [];
+    
+    // Parse legacy blocks directory
+    const pattern = this.configManager.get('filePattern');
+    const blockFiles = await this.fileStorage.findMdxFiles(pattern);
+    allFiles.push(...blockFiles);
+    
+    // Parse log directory files
+    const logDir = this.fileStorage.getLogDirectory();
+    const logPattern = '**/*.mdx';
+    const { glob } = await import('glob');
+    const logFiles = await glob(logPattern, { cwd: logDir, absolute: true });
+    allFiles.push(...logFiles);
+    
+    // Parse organized log directory files
+    const logOrganizedDir = this.fileStorage.getLogOrganizedDirectory();
+    const organizedLogFiles = await glob(logPattern, { cwd: logOrganizedDir, absolute: true });
+    allFiles.push(...organizedLogFiles);
+    
+    console.log(`Parsing ${allFiles.length} MDX files from blocks, log, and log_organized directories...`);
+    
+    for (const filePath of allFiles) {
       try {
         await this.parseFile(filePath);
       } catch (error) {
@@ -39,7 +55,7 @@ export class BlockParser {
       }
     }
     
-    console.log(`Parsed ${files.length} files, found ${this.blockMap.size} blocks`);
+    console.log(`Parsed ${allFiles.length} files, found ${this.blockMap.size} blocks`);
   }
 
   async parseFile(filePath: string): Promise<void> {
